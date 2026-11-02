@@ -289,17 +289,18 @@ fun HistoryScreen(a: AppState) {
 
 @Composable
 fun ProfileDialog(a: AppState) {
-    var adding by remember { mutableStateOf(a.profiles.isEmpty()) }
-    var name by rememberSaveable { mutableStateOf("") }
-    var age by rememberSaveable { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = { if (a.profiles.isNotEmpty()) a.profileOpen = false },
-        title = { Title("Who’s using the helmet?", size = 19) },
+        title = { Title("จัดการผู้ใช้", size = 19) },
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                Note(
+                    if (a.auth.hasSession()) a.auth.accountEmail()
+                    else "ยังไม่ได้ล็อกอิน · ข้อมูลอยู่ในเครื่องนี้"
+                )
                 a.profiles.forEach { profile ->
                     Row(
                         Modifier.fillMaxWidth()
@@ -313,41 +314,33 @@ fun ProfileDialog(a: AppState) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Box(
-                            Modifier.size(34.dp).clip(CircleShape).background(Color(0xFF3D6FB4)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Label(profile.name.take(1), color = Color.White)
-                        }
+                        ProfileAvatar(profile)
                         Column(Modifier.weight(1f)) {
                             Label(profile.name, size = 14)
-                            Note("${profile.age} ปี")
+                            Note("${profile.id} · ${profile.age} ปี")
                         }
-                        if (profile.id == a.currentProfile)
-                            Label("กำลังใช้", size = 10, color = C.ok)
+                        TextButton(onClick = { a.editProfile(profile) }) {
+                            Label("แก้ไข", size = 12, color = C.accent)
+                        }
                     }
                 }
-                if (!adding)
-                    TextButton(onClick = { adding = true }) {
-                        Label("+ Add User", color = C.accent)
+                TextButton(onClick = { a.editProfile(null) }) {
+                    Label("+ Add User", color = C.accent)
+                }
+                TextButton(
+                    onClick = {
+                        a.profileOpen = false
+                        a.logout()
                     }
-                if (adding) {
-                    InputField(name, { name = it }, "ชื่อที่แสดง")
-                    InputField(age, { age = it }, "อายุ (ปี)", KeyboardType.Number)
-                    Note("โปรไฟล์ใหม่นี้เก็บในเครื่อง")
+                ) {
+                    Label(
+                        if (a.auth.hasSession()) "ออกจากระบบ" else "เข้าสู่ระบบ",
+                        color = C.accent,
+                    )
                 }
             }
         },
         confirmButton = {
-            if (adding)
-                TextButton(
-                    enabled = name.isNotBlank() && age.toIntOrNull() in 3..110,
-                    onClick = { a.addLocalProfile(name, age.toInt()) },
-                ) {
-                    Label("บันทึกและใช้งาน", color = C.accent)
-                }
-        },
-        dismissButton = {
             if (a.profiles.isNotEmpty())
                 TextButton(onClick = { a.profileOpen = false }) { Label("ปิด") }
         },

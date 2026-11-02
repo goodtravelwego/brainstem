@@ -65,6 +65,15 @@ fun Profile.json() =
         .put("age", age)
         .put("cloud", cloud)
         .put("real", realName)
+        .put("sex", sex)
+        .put("birth", birth)
+        .put("type", type)
+        .put("hand", hand)
+        .put("guardianName", guardianName)
+        .put("guardianRelation", guardianRelation)
+        .put("guardianPhone", guardianPhone)
+        .put("photo", photo)
+        .put("photoPath", photoPath)
 
 fun profileFrom(j: JSONObject) =
     Profile(
@@ -73,6 +82,15 @@ fun profileFrom(j: JSONObject) =
         j.optInt("age", 9),
         j.optString("cloud"),
         j.optString("real", j.getString("name")),
+        j.optString("sex"),
+        j.optString("birth"),
+        j.optString("type", if (j.optInt("age", 9) < 18) "kid" else "adult"),
+        j.optString("hand"),
+        j.optString("guardianName"),
+        j.optString("guardianRelation"),
+        j.optString("guardianPhone"),
+        j.optString("photo"),
+        j.optString("photoPath"),
     )
 
 fun SessionRecord.json() =
@@ -85,6 +103,9 @@ fun SessionRecord.json() =
         .put("cl", closedLoop)
         .put("trace", JSONArray(alphaTrace))
         .put("deltas", JSONArray(deltas))
+        .put("iapf", iapf)
+        .put("initialLevel", initialLevel)
+        .put("events", JSONArray(events))
         .put(
             "items",
             JSONArray(
@@ -104,6 +125,9 @@ fun recordFrom(j: JSONObject) =
         complete = j.getBoolean("complete"),
         seconds = j.getInt("sec"),
         level = j.optInt("lvl", 1),
+        iapf = j.optDouble("iapf", 0.0),
+        initialLevel = j.optInt("initialLevel", j.optInt("lvl", 1)),
+        events = j.optJSONArray("events")?.strings() ?: emptyList(),
         dose =
             j.getJSONObject("dose").let { d ->
                 d.keys().asSequence().associateWith { d.getDouble(it) }

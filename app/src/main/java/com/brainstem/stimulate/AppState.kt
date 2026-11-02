@@ -55,6 +55,10 @@ class AppState(app: Application) : AndroidViewModel(app) {
     var summary by mutableStateOf<SessionRecord?>(null)
     var checkOpen by mutableStateOf(false)
     var profileOpen by mutableStateOf(false)
+    var profileEditing by mutableStateOf<Profile?>(null)
+    var profileFormOpen by mutableStateOf(false)
+    var mailEmail by mutableStateOf("")
+    var mailKind by mutableStateOf("")
     private var scopeKey = "guest"
     val user
         get() = profiles.find { it.id == currentProfile } ?: profiles.firstOrNull()
@@ -116,7 +120,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
                             pending.getBoolean("fromQueue"),
                         )
                     engine =
-                        SessionEngine(plan, spec).apply {
+                        SessionEngine(plan, spec, pending.optLong("seed", 0L)).apply {
                             advance(pending.getDouble("elapsed"))
                             paused = true
                         }
@@ -185,6 +189,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
                     .put("level", r.plan.level)
                     .put("cl", r.plan.closedLoop)
                     .put("fromQueue", r.plan.fromQueue)
+                    .put("seed", r.seed)
                     .put("elapsed", r.elapsed),
         )
     }
@@ -210,7 +215,8 @@ class AppState(app: Application) : AndroidViewModel(app) {
             error = ""
             try {
                 if (signup && !auth.signUp(email.trim(), password)) {
-                    message = "เราส่งลิงก์ยืนยันไปที่ $email แล้ว"
+                    mailEmail = email
+                    mailKind = "confirm"
                     return@launch
                 } else if (!signup) auth.signIn(email.trim(), password)
                 afterLogin()
@@ -231,7 +237,8 @@ class AppState(app: Application) : AndroidViewModel(app) {
             busy = true
             try {
                 auth.recover(email.trim())
-                message = "เราส่งลิงก์ตั้งรหัสผ่านไปที่ $email แล้ว"
+                mailEmail = email
+                mailKind = "reset"
             } catch (e: Exception) {
                 error = e.message.orEmpty()
             } finally {
@@ -256,12 +263,23 @@ class AppState(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun afterLogin() {
-        val cloud = auth.profiles()
+        val fetched = auth.profiles()
         scopeKey = auth.accountId()
         repo.prefs.edit().putString("scope", scopeKey).putBoolean("guest", false).apply()
         load()
+        val cloud =
+            fetched.map { p ->
+                profiles
+                    .find { it.cloud == p.cloud }
+                    ?.let { old -> p.copy(id = old.id, photo = p.photo.ifBlank { old.photo }) } ?: p
+            }
         val local =
-            profiles.filter { it.cloud.isBlank() && it.id.startsWith("P-") && it.id.length > 8 }
+            profiles.filter {
+                it.cloud.isBlank() &&
+                    (it.name !in listOf("น้องต้นกล้า", "คุณสมศรี (ตัวอย่าง)") ||
+                        (repo.read("user.$scopeKey.${it.id}").optJSONArray("history")?.length()
+                            ?: 0) > 0)
+            }
         if (cloud.isNotEmpty() || local.isNotEmpty()) {
             profiles.clear()
             profiles.addAll(cloud + local)
@@ -271,6 +289,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
             profiles.clear()
             currentProfile = ""
             profileOpen = true
+            profileFormOpen = true
         }
         loggedIn = true
         save()
@@ -294,6 +313,10 @@ class AppState(app: Application) : AndroidViewModel(app) {
             } catch (_: Exception) {}
             repo.prefs.edit().putBoolean("guest", false).apply()
             loggedIn = false
+            mailEmail = ""
+            profileOpen = false
+            profileFormOpen = false
+            profileEditing = null
             screen = Screen.HOME
         }
     }
@@ -316,6 +339,51 @@ class AppState(app: Application) : AndroidViewModel(app) {
         loadUser()
         save()
         profileOpen = false
+    }
+
+    fun editProfile(profile: Profile?) {
+        profileEditing = profile
+        profileFormOpen = true
+        error = ""
+    }
+
+    fun nextProfileId(): String {
+        var number = profiles.size + 1
+        var id: String
+        do {
+            id = "P-${(number++).toString().padStart(3,'0')}"
+        } while (profiles.any { it.id == id })
+        return id
+    }
+
+    fun saveProfile(profile: Profile) {
+        viewModelScope.launch {
+            busy = true
+            error = ""
+            try {
+                val saved = if (auth.hasSession()) auth.saveProfile(profile) else profile
+                if (auth.hasSession() && auth.photoUploadFailed)
+                    android.widget.Toast.makeText(
+                            getApplication(),
+                            "อัปโหลดรูปไม่สำเร็จ · เก็บรูปไว้ในเครื่อง",
+                            android.widget.Toast.LENGTH_LONG,
+                        )
+                        .show()
+                save()
+                val i = profiles.indexOfFirst { it.id == saved.id }
+                if (i >= 0) profiles[i] = saved else profiles.add(saved)
+                currentProfile = saved.id
+                loadUser()
+                profileFormOpen = false
+                profileOpen = false
+                profileEditing = null
+                save()
+            } catch (e: Exception) {
+                error = e.message.orEmpty()
+            } finally {
+                busy = false
+            }
+        }
     }
 
     fun togglePro() {
@@ -441,6 +509,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
 
     fun finish(complete: Boolean) {
         val r = engine ?: return
+        if (!complete) r.endEarly()
         engine = null
         revision++
         if (r.elapsed >= 5) {

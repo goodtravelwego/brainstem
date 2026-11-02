@@ -241,6 +241,15 @@ data class Profile(
     val age: Int = 9,
     val cloud: String = "",
     val realName: String = name,
+    val sex: String = "",
+    val birth: String = "",
+    val type: String = if (age < 18) "kid" else "adult",
+    val hand: String = "",
+    val guardianName: String = "",
+    val guardianRelation: String = "",
+    val guardianPhone: String = "",
+    val photo: String = "",
+    val photoPath: String = "",
 )
 
 data class Spec(
@@ -262,6 +271,9 @@ data class SessionRecord(
     val closedLoop: Boolean = false,
     val alphaTrace: List<Double> = emptyList(),
     val deltas: List<Double> = emptyList(),
+    val iapf: Double = 0.0,
+    val initialLevel: Int = level,
+    val events: List<String> = emptyList(),
 )
 
 data class RunPlan(
@@ -323,7 +335,7 @@ fun frequencyAt(s: Step, t: Double): Double {
 }
 
 /** Pure session engine. Simulator only: it never sends commands to a physical device. */
-class SessionEngine(val plan: RunPlan, val spec: Spec) {
+class SessionEngine(val plan: RunPlan, val spec: Spec, val seed: Long = Random.nextLong()) {
     var index = 0
         private set
 
@@ -344,7 +356,28 @@ class SessionEngine(val plan: RunPlan, val spec: Spec) {
     val programSeconds = DoubleArray(plan.programs.size)
     val eeg = doubleArrayOf(1.0, 1.0, 1.0, 1.0)
     val trace = mutableListOf<Double>()
+    val events = mutableListOf<String>()
+    private val random = Random(seed)
+    val iapf = ((9.3 + random.nextDouble() * 1.2) * 10).roundToInt() / 10.0
+    private val best = ((iapf + random.nextDouble() * 1.2 - .5) * 10).roundToInt() / 10.0
+    private var spike = 0.0
+    private var pending = 0.0
+    private var ticks = 0L
+    private var stepTicks = 0
+    private val samples = mutableListOf<DoubleArray>()
+    private var lastMeasure: DoubleArray? = null
     private var base: DoubleArray? = null
+    val bands: List<Double>?
+        get() =
+            samples
+                .takeLast(8)
+                .takeIf { it.isNotEmpty() }
+                ?.let { values ->
+                    (0..3).map { i ->
+                        (values.map { it[i] }.average() / (base?.get(i) ?: 1.0) - 1) * 100
+                    }
+                }
+
     val step
         get() = plan.steps[index.coerceAtMost(plan.steps.lastIndex)]
 
@@ -353,10 +386,12 @@ class SessionEngine(val plan: RunPlan, val spec: Spec) {
 
     fun advance(seconds: Double) {
         if (paused || finished || seconds <= 0) return
-        var left = seconds
-        while (left > 0 && !finished) {
+        // Fixed simulation increments make seeded replay independent of UI frame timing.
+        pending += seconds
+        while (pending >= .1 - 1e-8 && !finished) {
             val s = step
-            val dt = min(left, s.dur - stepElapsed)
+            val dt = .1
+            pending -= dt
             if (s.phase.isEmpty()) {
                 val energy =
                     spec.irradiance *
@@ -365,30 +400,80 @@ class SessionEngine(val plan: RunPlan, val spec: Spec) {
                         ((s.duty.takeIf { it > 0 } ?: spec.duty) / 100.0) / 1000.0 * dt
                 s.pts.forEach { dose[it] = dose.getValue(it) + energy }
                 programSeconds[s.programIndex] += dt
-                // Deterministic prototype response, explicitly simulation in Settings.
                 val f = frequencyAt(s, stepElapsed)
-                val targets =
-                    if (f >= 30) doubleArrayOf(1.08, 1.22, 0.95, 1.06)
-                    else if (f >= 13) doubleArrayOf(1.08, 1.16, 0.92, 1.05)
-                    else doubleArrayOf(1.28, 1.02, 1.04, 1.02)
-                eeg.indices.forEach { eeg[it] += (targets[it] - eeg[it]) * min(1.0, dt / 50) }
-            } else eeg.indices.forEach { eeg[it] += (1 - eeg[it]) * min(1.0, dt / 200) }
-            stepElapsed += dt
-            elapsed += dt
-            left -= dt
-            if (stepElapsed >= s.dur - 0.00001) {
-                if (s.phase == "pre") base = eeg.copyOf()
-                else if (s.phase.isNotEmpty()) {
-                    trace += (eeg[0] / (base?.get(0) ?: 1.0) - 1) * 100
-                    if ((eeg[3] / (base?.get(3) ?: 1.0) - 1) * 100 > 35 && level > 1) level--
+                if (plan.closedLoop) {
+                    val d = abs(f - best)
+                    val targets =
+                        doubleArrayOf(
+                            1 +
+                                (if (d < 1.8) .32 * (1 - d / 1.8)
+                                else if (f >= 7 && f < 13) .06 else 0.0) +
+                                (if (f >= 30) .04 else 0.0),
+                            1 + (if (f >= 13 && f < 30) .16 else if (f >= 30) .12 else 0.0),
+                            1 + (if (f < 8) .2 else if (f >= 13) -.09 else 0.0),
+                            1 + (if (f >= 25 && f < 36) .08 else 0.0),
+                        )
+                    eeg.indices.forEach { eeg[it] += (targets[it] - eeg[it]) * min(1.0, dt / 50) }
                 }
+            } else {
+                eeg.indices.forEach { eeg[it] += (1 - eeg[it]) * min(1.0, dt / 120) * .6 }
+                if ((stepTicks + 1) / 10.0 > 3) {
+                    if (spike <= 0 && random.nextDouble() < dt * .01)
+                        spike = 6 + random.nextDouble() * 8
+                    if (spike > 0) spike -= dt
+                    samples +=
+                        DoubleArray(4) { i ->
+                            eeg[i] +
+                                (random.nextDouble() - .5) * .05 +
+                                if (i == 3 && spike > 0) .45 else 0.0
+                        }
+                }
+            }
+            ticks++
+            stepTicks++
+            stepElapsed = stepTicks / 10.0
+            elapsed = ticks / 10.0
+            if (stepTicks >= s.dur * 10) {
+                if (s.phase.isNotEmpty()) endMeasurement(s)
                 if (index == plan.steps.lastIndex) finished = true
                 else {
                     index++
                     stepElapsed = 0.0
+                    stepTicks = 0
+                    samples.clear()
                 }
             }
         }
+    }
+
+    private fun endMeasurement(s: Step) {
+        if (samples.isEmpty()) return
+        val m = DoubleArray(4) { i -> samples.map { it[i] }.average() }
+        lastMeasure = m
+        if (s.phase == "pre") {
+            base = m
+            events += "ค่าเริ่มต้นพร้อม · ยอดอัลฟา $iapf Hz"
+            return
+        }
+        val b = base ?: return
+        val alpha = ((m[0] / b[0] - 1) * 100).roundToInt()
+        val hb = ((m[3] / b[3] - 1) * 100).roundToInt()
+        trace += alpha.toDouble()
+        if (s.phase == "post") return
+        if (hb > 35 && level > 1) {
+            level--
+            events += "high-β สูง +$hb% → ลดแสงเหลือ Level $level"
+        }
+        val previous = plan.steps.take(index).lastOrNull { it.phase.isEmpty() }
+        val focus = previous?.let { plan.programs[it.programIndex].cat == "focus" } == true
+        val score = if (focus) ((m[1] / m[2] / (b[1] / b[2]) - 1) * 100).roundToInt() else alpha
+        events +=
+            "ช่วงที่ผ่านมา ${if (score > 0) "+" else ""}$score% ${if (focus) "(β/θ)" else "(α)"}"
+    }
+
+    fun endEarly() {
+        if (!finished && step.phase.isNotEmpty()) endMeasurement(step)
+        paused = true
     }
 
     fun record(complete: Boolean) =
@@ -404,8 +489,14 @@ class SessionEngine(val plan: RunPlan, val spec: Spec) {
             closedLoop = plan.closedLoop,
             alphaTrace = trace.toList(),
             deltas =
-                if (base != null) eeg.indices.map { (eeg[it] / base!![it] - 1) * 100 }
+                if (base != null && lastMeasure != null)
+                    eeg.indices.map {
+                        ((lastMeasure!![it] / base!![it] - 1) * 100).roundToInt().toDouble()
+                    }
                 else emptyList(),
+            iapf = iapf,
+            initialLevel = plan.level,
+            events = events.takeLast(6),
         )
 }
 

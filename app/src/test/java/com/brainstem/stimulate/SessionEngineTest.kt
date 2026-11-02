@@ -6,6 +6,54 @@ import org.junit.Test
 
 class SessionEngineTest {
     @Test
+    fun seededClosedLoopReplaySurvivesDifferentFrameSizes() {
+        val plan =
+            makePlan(
+                listOf(Program("test", "Test", steps = listOf(Step(dur = 120)))),
+                3,
+                true,
+                false,
+            )
+        val first = SessionEngine(plan, Spec(), 42L)
+        repeat(1200) { first.advance(.2) }
+        val restored = SessionEngine(plan, Spec(), 42L)
+        restored.advance(first.elapsed)
+        assertEquals(first.iapf, restored.iapf, 0.0)
+        assertEquals(first.trace, restored.trace)
+        assertEquals(first.events, restored.events)
+        assertEquals(first.level, restored.level)
+        assertArrayEquals(first.eeg, restored.eeg, 0.0)
+        assertEquals(first.record(true).deltas, restored.record(true).deltas)
+    }
+
+    @Test
+    fun eegIsSampledOnlyWithLightOffAndResponseDependsOnFrequency() {
+        fun engine(f: Double) =
+            SessionEngine(
+                makePlan(
+                    listOf(Program("test", "Test", steps = listOf(Step(f = f, dur = 120)))),
+                    1,
+                    true,
+                    false,
+                ),
+                Spec(),
+                24L,
+            )
+        val alpha = engine(10.0)
+        alpha.advance(60.0)
+        assertNull(alpha.bands)
+        assertTrue(alpha.trace.isEmpty())
+        alpha.advance(60.0)
+        assertNull(alpha.bands)
+        alpha.advance(120.0)
+        val gamma = engine(40.0).apply { advance(240.0) }
+        assertEquals(1, alpha.trace.size)
+        assertTrue(gamma.record(true).deltas[1] > alpha.record(true).deltas[1])
+        assertTrue(gamma.record(true).deltas[2] < alpha.record(true).deltas[2])
+        assertEquals(.24, alpha.dose.getValue("F3"), 1e-8)
+    }
+
+    @Test
     fun headsetRequiresCleanContactsAndMainsThenCachesSameDayFlow() {
         val model = HeadsetCheckModel(false, Random(4))
         assertFalse(model.ready)

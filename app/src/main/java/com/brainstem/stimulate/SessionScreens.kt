@@ -1,8 +1,7 @@
 package com.brainstem.stimulate
 
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.os.SystemClock
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
@@ -14,6 +13,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
@@ -25,6 +25,14 @@ fun RunScreen(a: AppState) {
     val r = a.engine ?: return
     val revision = a.revision
     val s = r.step
+    val motion = rememberInfiniteTransition(label = "run motion")
+    val wavePhase by
+        motion.animateFloat(
+            0f,
+            1f,
+            infiniteRepeatable(tween(6000, easing = LinearEasing)),
+            label = "wave phase",
+        )
     LaunchedEffect(r) {
         var last = SystemClock.elapsedRealtime()
         while (a.engine === r) {
@@ -55,12 +63,14 @@ fun RunScreen(a: AppState) {
         )
         Timeline(r.plan.steps, r.index)
         if (s.phase.isEmpty()) {
-            val pulse = (.6 + .4 * sin(r.elapsed * 1.8)).toFloat()
-            HeadMap(
+            val fVisual = min(1.0, .5 + .012 * frequencyAt(s, r.stepElapsed))
+            val w = .5 + .5 * sin(wavePhase * 6 * 2 * PI * fVisual)
+            val pulse = if (r.paused) .28 else .35 + .65 * w * w * (3 - 2 * w)
+            val power = (r.level * .1 * s.power / 100.0 * 1.5).coerceIn(.5, 1.0)
+            HeadGlow(
                 s.pts,
-                Modifier.width(270.dp).padding(top = 4.dp),
-                glow = true,
-                values = s.pts.associateWith { pulse.toDouble() },
+                values = s.pts.associateWith { if (r.paused) pulse else power * pulse },
+                modifier = Modifier.width(270.dp).padding(top = 4.dp),
             )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -95,10 +105,19 @@ fun RunScreen(a: AppState) {
                     val x = size.width * i / 260
                     val y =
                         size.height / 2 +
-                            sin(i / 260.0 * cycles * 2 * PI - r.elapsed) * size.height * .32
+                            -sin((i / 260.0 + wavePhase) * cycles * 2 * PI) * 9.dp.toPx()
                     if (i == 0) path.moveTo(x, y.toFloat()) else path.lineTo(x, y.toFloat())
                 }
-                drawPath(path, p.accent, style = Stroke(1.8.dp.toPx()))
+                drawPath(
+                    path,
+                    Brush.horizontalGradient(
+                        0f to p.accent.copy(alpha = 0f),
+                        .15f to p.accent.copy(alpha = .85f),
+                        .85f to p.accent.copy(alpha = .85f),
+                        1f to p.accent.copy(alpha = 0f),
+                    ),
+                    style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round),
+                )
             }
             Label(s.label, size = 15, weight = FontWeight.Medium, align = TextAlign.Center)
             if (r.plan.closedLoop) Note("Level ${r.level} · EEG ปิดระหว่างกระตุ้น")
@@ -110,6 +129,16 @@ fun RunScreen(a: AppState) {
 "post"->"After"
 else->"Measure"}} · EEG"
             )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Note(
+                    when (s.phase) {
+                        "pre" -> "BASELINE"
+                        "post" -> "AFTER"
+                        else -> "MEASURE"
+                    }
+                )
+                Label("α ${num(r.iapf)} Hz", size = 12, mono = true, color = p.muted)
+            }
             Column(
                 Modifier.fillMaxWidth().padding(vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -119,13 +148,20 @@ else->"Measure"}} · EEG"
                         Label(ch, Modifier.width(30.dp), size = 11, color = p.muted, mono = true)
                         Canvas(Modifier.weight(1f).height(36.dp)) {
                             val path = Path()
-                            for (j in 0..250) {
-                                val x = size.width * j / 250f
-                                val t = j / 250.0 * 6 * PI
-                                val y =
-                                    size.height / 2 +
-                                        sin(t * 3 + r.elapsed * 5 + i) * 7 +
-                                        sin(t * 7 + r.elapsed * 2 + i) * 3
+                            for (j in 0..604) {
+                                val x = size.width * j / 604f
+                                val t = wavePhase * 6 + j / 220.0
+                                val phase = i * 1.7
+                                val envelope = .55 + .45 * sin(2 * PI * .25 * t + phase)
+                                val posterior = if (i == 4) 1.5 else if (i >= 2) 1.25 else .9
+                                val signal =
+                                    r.eeg[0] *
+                                        posterior *
+                                        envelope *
+                                        sin(2 * PI * r.iapf * t + phase) +
+                                        .45 * r.eeg[2] * sin(2 * PI * 5.5 * t + phase * 2) +
+                                        .22 * r.eeg[1] * sin(2 * PI * 19 * t + i)
+                                val y = size.height / 2 - signal * size.height * .26
                                 if (j == 0) path.moveTo(x, y.toFloat())
                                 else path.lineTo(x, y.toFloat())
                             }
@@ -138,9 +174,9 @@ else->"Measure"}} · EEG"
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf("θ", "α", "β", "high-β").forEachIndexed { i, n ->
+                    listOf("θ" to 2, "α" to 0, "β" to 1, "hβ" to 3).forEach { (n, i) ->
                         Label(
-                            "$n ${((r.eeg[i]-1)*100).roundToInt().let{if(it>=0)"+$it"else"$it"}}%",
+                            "$n ${if(s.phase=="pre") "—" else r.bands?.get(i)?.roundToInt()?.let{if(it>=0)"+$it%"else"$it%"} ?: "…"}",
                             size = 11,
                             mono = true,
                         )
@@ -184,14 +220,10 @@ else->"Measure"}} · EEG"
 @Composable
 fun SummaryScreen(a: AppState) {
     val r = a.summary ?: return
+    val context = LocalContext.current
     LaunchedEffect(r.date) {
         if (r.complete) {
-            runCatching {
-                val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 40)
-                tone.startTone(ToneGenerator.TONE_PROP_ACK, 300)
-                delay(500)
-                tone.release()
-            }
+            runCatching { completionChime(context) }
         }
     }
     ScreenColumn("summary") {
@@ -223,7 +255,7 @@ fun SummaryScreen(a: AppState) {
             CardBox(padding = 14) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Label("EEG · Alpha", weight = FontWeight.Medium)
-                    Note("Simulation")
+                    Note("IAPF ${num(r.iapf)} Hz")
                 }
                 Label(
                     "${if(r.deltas[0]>=0)"+"else""}${r.deltas[0].roundToInt()}%",
@@ -266,6 +298,7 @@ fun SummaryScreen(a: AppState) {
                         )
                     }
                 }
+                if (r.level < r.initialLevel) Note("ความแรง L${r.initialLevel}→L${r.level}")
             }
         HeadMap(
             r.dose.filterValues { it > 0 }.keys.toList(),

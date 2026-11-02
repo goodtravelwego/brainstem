@@ -26,6 +26,8 @@ class Auth(private val context: Context) {
     private val prefs = context.getSharedPreferences("account", Context.MODE_PRIVATE)
     private val alias = "brainstem.auth.v1"
     private val redirect = cfg.getString("redirect")
+    var photoUploadFailed = false
+        private set
 
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -80,6 +82,8 @@ class Auth(private val context: Context) {
 
     fun accountId() = session()?.optJSONObject("user")?.optString("id") ?: "guest"
 
+    fun accountEmail() = session()?.optJSONObject("user")?.optString("email").orEmpty()
+
     fun clear() {
         encryptedSave(null)
     }
@@ -89,7 +93,26 @@ class Auth(private val context: Context) {
         method: String = "GET",
         body: JSONObject? = null,
         token: String? = null,
-    ): String {
+        headers: Map<String, String> = emptyMap(),
+    ): String =
+        String(
+            request(
+                path,
+                method,
+                body?.toString()?.toByteArray(Charsets.UTF_8),
+                token,
+                if (body == null) headers else mapOf("Content-Type" to "application/json") + headers,
+            ),
+            Charsets.UTF_8,
+        )
+
+    private fun request(
+        path: String,
+        method: String = "GET",
+        body: ByteArray? = null,
+        token: String? = null,
+        headers: Map<String, String> = emptyMap(),
+    ): ByteArray {
         val connection = URL(cfg.getString("url") + path).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = method
@@ -97,21 +120,20 @@ class Auth(private val context: Context) {
             connection.readTimeout = 15000
             connection.setRequestProperty("apikey", cfg.getString("key"))
             token?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
+            headers.forEach { (key, value) -> connection.setRequestProperty(key, value) }
             if (body != null) {
-                connection.setRequestProperty("Content-Type", "application/json")
                 connection.doOutput = true
-                connection.outputStream.use {
-                    it.write(body.toString().toByteArray(Charsets.UTF_8))
-                }
+                connection.outputStream.use { it.write(body) }
             }
             val code = connection.responseCode
             val text =
-                (if (code in 200..299) connection.inputStream else connection.errorStream)
-                    ?.bufferedReader()
-                    ?.use { it.readText() }
-                    .orEmpty()
+                (if (code in 200..299) connection.inputStream else connection.errorStream)?.use {
+                    it.readBytes()
+                } ?: byteArrayOf()
             if (code !in 200..299) {
-                val e = runCatching { JSONObject(text) }.getOrDefault(JSONObject())
+                val e =
+                    runCatching { JSONObject(String(text, Charsets.UTF_8)) }
+                        .getOrDefault(JSONObject())
                 throw IllegalStateException(
                     message(
                         e.optString(
@@ -175,7 +197,8 @@ class Auth(private val context: Context) {
             val j =
                 JSONObject(
                     call(
-                        "/auth/v1/signup?redirect_to=" + Uri.encode(redirect),
+                        "/auth/v1/signup?redirect_to=" +
+                            Uri.encode("https://brainstem-monitor.netlify.app/app/"),
                         "POST",
                         JSONObject().put("email", email).put("password", password),
                     )
@@ -260,9 +283,116 @@ class Auth(private val context: Context) {
                         age,
                         j.getString("id"),
                         j.getString("real_name"),
+                        j.optString("sex").nullToEmpty(),
+                        j.optString("birth_date").nullToEmpty(),
+                        j.optString("type", "kid"),
+                        j.optString("handedness").nullToEmpty(),
+                        j.optString("guardian_name").nullToEmpty(),
+                        j.optString("guardian_relation").nullToEmpty(),
+                        j.optString("guardian_phone").nullToEmpty(),
+                        photo =
+                            j.optString("photo_path")
+                                .nullToEmpty()
+                                .takeIf { it.isNotBlank() }
+                                ?.let { path ->
+                                    runCatching {
+                                            Base64.encodeToString(
+                                                request(
+                                                    "/storage/v1/object/authenticated/profile-photos/$path",
+                                                    token = token(),
+                                                ),
+                                                Base64.NO_WRAP,
+                                            )
+                                        }
+                                        .getOrDefault("")
+                                }
+                                .orEmpty(),
+                        photoPath = j.optString("photo_path").nullToEmpty(),
                     )
                 }
         }
+
+    suspend fun saveProfile(profile: Profile): Profile =
+        withContext(Dispatchers.IO) {
+            photoUploadFailed = false
+            val row =
+                JSONObject()
+                    .put("real_name", profile.realName)
+                    .put("nickname", profile.name)
+                    .put("sex", profile.sex.ifBlank { null } ?: JSONObject.NULL)
+                    .put("birth_date", profile.birth)
+                    .put("type", profile.type)
+                    .put("handedness", profile.hand.ifBlank { null } ?: JSONObject.NULL)
+                    .put("local_code", profile.id)
+                    .put("guardian_name", profile.guardianName.ifBlank { null } ?: JSONObject.NULL)
+                    .put(
+                        "guardian_relation",
+                        profile.guardianRelation.ifBlank { null } ?: JSONObject.NULL,
+                    )
+                    .put(
+                        "guardian_phone",
+                        profile.guardianPhone.ifBlank { null } ?: JSONObject.NULL,
+                    )
+            var result = profile
+            if (profile.cloud.isNotBlank())
+                call(
+                    "/rest/v1/app_profile?id=eq.${Uri.encode(profile.cloud)}",
+                    "PATCH",
+                    row,
+                    token(),
+                )
+            else {
+                row.put("consent_at", java.time.Instant.now().toString())
+                val saved =
+                    JSONArray(
+                            call(
+                                "/rest/v1/app_profile",
+                                "POST",
+                                row,
+                                token(),
+                                mapOf("Prefer" to "return=representation"),
+                            )
+                        )
+                        .getJSONObject(0)
+                result = profile.copy(cloud = saved.getString("id"))
+            }
+            // Photo failure must never discard a successfully saved profile.
+            runCatching {
+                    val path =
+                        if (result.photo.isNotBlank()) {
+                            val target = "${accountId()}/${result.cloud}.jpg"
+                            request(
+                                "/storage/v1/object/profile-photos/$target",
+                                "POST",
+                                Base64.decode(result.photo, Base64.DEFAULT),
+                                token(),
+                                mapOf("Content-Type" to "image/jpeg", "x-upsert" to "true"),
+                            )
+                            target
+                        } else {
+                            if (result.photoPath.isNotBlank())
+                                request(
+                                    "/storage/v1/object/profile-photos/${result.photoPath}",
+                                    "DELETE",
+                                    token = token(),
+                                )
+                            ""
+                        }
+                    if (path != result.photoPath) {
+                        call(
+                            "/rest/v1/app_profile?id=eq.${result.cloud}",
+                            "PATCH",
+                            JSONObject().put("photo_path", path.ifBlank { JSONObject.NULL }),
+                            token(),
+                        )
+                        result = result.copy(photoPath = path)
+                    }
+                }
+                .onFailure { photoUploadFailed = true }
+            result
+        }
+
+    private fun String.nullToEmpty() = if (this == "null") "" else this
 
     suspend fun signOut() =
         withContext(Dispatchers.IO) {

@@ -516,6 +516,9 @@ val ICONS =
         "star" to
             "M12 3.5L14.6 8.8L20.5 9.7L16.2 13.8L17.2 19.6L12 16.9L6.8 19.6L7.8 13.8L3.5 9.7L9.4 8.8Z",
         "back" to "M15 5L8 12L15 19",
+        "eye" to "M2 12C6 3 18 3 22 12C18 21 6 21 2 12ZM15 12A3 3 0 1 1 9 12A3 3 0 1 1 15 12",
+        "eyeoff" to
+            "M3 3L21 21M2 12C4 8 7 6 10 6M14 6C18 7 20 9 22 12C20 16 17 18 14 18M10 18C6 17 4 15 2 12",
     )
 
 @Composable
@@ -531,6 +534,73 @@ fun LineIcon(name: String, modifier: Modifier = Modifier.size(22.dp), color: Col
                 color,
                 style = Stroke(1.7f, cap = StrokeCap.Round, join = StrokeJoin.Round),
             )
+        }
+    }
+}
+
+@Composable
+fun HeadGlow(
+    points: List<String>,
+    values: Map<String, Double>,
+    modifier: Modifier = Modifier.width(270.dp),
+) {
+    val p = C
+    val dark = p == Dark
+    Canvas(modifier.aspectRatio(1f)) {
+        val sx = size.width / 220f
+        // The source SVG is centered inside a square run panel.
+        translate(top = (size.height - size.width / 1.1f) / 2) {
+            scale(sx, sx, pivot = Offset.Zero) {
+                val outline = if (dark) Color.White.copy(alpha = .16f) else p.line
+                val fill = if (dark) Color.White.copy(alpha = .07f) else p.surface2
+                drawPath(
+                    Path().apply {
+                        moveTo(98f, 16f)
+                        quadraticTo(110f, 2f, 122f, 16f)
+                        moveTo(24f, 92f)
+                        quadraticTo(14f, 106f, 24f, 120f)
+                        moveTo(196f, 92f)
+                        quadraticTo(206f, 106f, 196f, 120f)
+                    },
+                    outline,
+                    style = Stroke(2f, cap = StrokeCap.Round),
+                )
+                val rect = Rect(24f, 14f, 196f, 198f)
+                drawOval(fill, rect.topLeft, rect.size)
+                drawOval(outline, rect.topLeft, rect.size, style = Stroke(1.5f))
+                clipPath(Path().apply { addOval(rect) }) {
+                    POINTS.forEach { n ->
+                        val xy = POINT_XY[POINTS.indexOf(n)]
+                        val value = (values[n] ?: 0.0).toFloat()
+                        if (value > 0)
+                            drawCircle(
+                                Brush.radialGradient(
+                                    0f to Color(0xFFFF9A8A),
+                                    .4f to Color(0xFFFF6B5B).copy(alpha = .55f),
+                                    1f to Color(0xFFFF6B5B).copy(alpha = 0f),
+                                    center = Offset(xy.first, xy.second),
+                                    radius = 34f,
+                                ),
+                                34f,
+                                Offset(xy.first, xy.second),
+                                alpha = min(1f, value * if (dark) 1.7f else 1.25f),
+                                blendMode = if (dark) BlendMode.Screen else BlendMode.SrcOver,
+                            )
+                    }
+                }
+                POINTS.forEach { n ->
+                    val xy = POINT_XY[POINTS.indexOf(n)]
+                    val active = n in points
+                    drawCircle(
+                        if (active) {
+                            if (dark) Color.White else Color(0xFFB13E2C)
+                        } else if (dark) Color.White.copy(alpha = .28f) else p.muted,
+                        if (active) 3f else 1.8f,
+                        Offset(xy.first, xy.second),
+                        alpha = if (active) .95f else .6f,
+                    )
+                }
+            }
         }
     }
 }

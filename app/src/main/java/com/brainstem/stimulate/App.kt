@@ -7,6 +7,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -64,7 +65,8 @@ fun BrainApp(a: AppState) {
                 }
             }
         if (a.checkOpen) HeadsetCheck(a)
-        if (a.profileOpen) ProfileDialog(a)
+        if (a.profileOpen && !a.profileFormOpen) ProfileDialog(a)
+        if (a.profileFormOpen) ProfileForm(a)
         if (a.message.isNotBlank())
             AlertDialog(
                 onDismissRequest = { a.message = "" },
@@ -150,6 +152,28 @@ fun ScreenColumn(key: Any, content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
+    if (a.mailEmail.isNotBlank()) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(26.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Wordmark(29)
+            Spacer(Modifier.height(20.dp))
+            Label("✓", size = 40, color = C.ok)
+            Title("เช็คอีเมล", size = 26)
+            Label("เราส่งลิงก์ไปที่ ${a.mailEmail} แล้ว")
+            Note(
+                (if (a.mailKind == "confirm") "เปิดอีเมล แล้วกดลิงก์ยืนยัน จากนั้นกลับมาเข้าสู่ระบบ"
+                else "เปิดอีเมล แล้วกดลิงก์ เพื่อตั้งรหัสผ่านใหม่") +
+                    " · ถ้าไม่เห็น ลองดูในกล่องจดหมายขยะ (Spam)"
+            )
+            Action("กลับไปหน้าเข้าสู่ระบบ", primary = false) {
+                a.mailEmail = ""
+                a.error = ""
+            }
+        }
+        return
+    }
     var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var reveal by remember { mutableStateOf(false) }
@@ -157,12 +181,12 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
     Column(
         Modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 26.dp, vertical = 34.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .imePadding()
+            .padding(horizontal = 16.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Wordmark(29)
-        Spacer(Modifier.height(18.dp))
-        Title(if (signup) "สร้างบัญชีใหม่" else "ยินดีต้อนรับ", size = 26)
+        Title(if (signup) "สร้างบัญชีใหม่" else "ยินดีต้อนรับ", size = 24)
         Note(
             if (signup) "ใช้อีเมลของผู้ปกครองหรือของตัวเอง"
             else "เข้าสู่ระบบเพื่อเก็บข้อมูลไว้อย่างปลอดภัย ใช้ได้หลายเครื่อง"
@@ -198,21 +222,45 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Note("รหัสผ่าน" + if (signup) " (อย่างน้อย 6 ตัว)" else "")
-            OutlinedTextField(
+            BasicTextField(
                 password,
                 { password = it },
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(C.surface)
+                    .border(1.dp, C.line, RoundedCornerShape(12.dp)),
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
                 visualTransformation =
                     if (reveal) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                trailingIcon = {
-                    TextButton(onClick = { reveal = !reveal }) {
-                        Label(if (reveal) "ซ่อน" else "แสดง", size = 12, color = C.muted)
+                decorationBox = { field ->
+                    Row(
+                        Modifier.padding(start = 12.dp, end = 4.dp).heightIn(min = 44.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.weight(1f).padding(vertical = 10.dp)) { field() }
+                        Box(
+                            Modifier.size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { reveal = !reveal }
+                                .semantics {
+                                    contentDescription =
+                                        if (reveal) "ซ่อนรหัสผ่าน" else "แสดงรหัสผ่าน"
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            LineIcon(if (reveal) "eyeoff" else "eye", Modifier.size(18.dp), C.muted)
+                        }
                     }
                 },
-                textStyle = MaterialTheme.typography.bodyLarge,
+                textStyle =
+                    androidx.compose.ui.text.TextStyle(
+                        fontFamily = BodyFont,
+                        fontSize = 14.sp,
+                        lineHeight = 21.7.sp,
+                        color = C.ink,
+                    ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(C.accent),
             )
         }
         if (a.error.isNotBlank()) Label(a.error, size = 12, color = C.accent)
@@ -257,15 +305,30 @@ fun InputField(
     label: String,
     keyboard: KeyboardType = KeyboardType.Text,
 ) {
-    OutlinedTextField(
+    BasicTextField(
         value,
         onChange,
-        Modifier.fillMaxWidth(),
-        label = if (label.isNotBlank()) ({ Note(label) }) else null,
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(C.surface)
+            .border(1.dp, C.line, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         singleLine = true,
-        shape = RoundedCornerShape(14.dp),
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-        textStyle = MaterialTheme.typography.bodyLarge,
+        textStyle =
+            androidx.compose.ui.text.TextStyle(
+                fontFamily = BodyFont,
+                fontSize = 14.sp,
+                lineHeight = 21.7.sp,
+                color = C.ink,
+            ),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(C.accent),
+        decorationBox = { field ->
+            Box {
+                if (value.isEmpty() && label.isNotBlank()) Label(label, size = 14, color = C.muted)
+                field()
+            }
+        },
     )
 }
 
@@ -467,7 +530,22 @@ private fun ProgramRow(a: AppState, p: Program) {
                             weight = FontWeight.SemiBold,
                         )
                 }
-                if (info) Note(p.goal)
+                if (info) {
+                    Note(p.goal)
+                    a.repo.info.optJSONObject(p.id)?.let { details ->
+                        val evidence = a.repo.evidence.getJSONArray(details.getString("ev"))
+                        Label(
+                            evidence.getString(0),
+                            size = 10,
+                            color = C.accent,
+                            modifier =
+                                Modifier.padding(top = 3.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(C.accent.copy(alpha = .08f))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp),
+                        )
+                    }
+                }
             }
             Box(
                 Modifier.size(26.dp)

@@ -20,7 +20,8 @@ class StimulateFlowTest {
     private fun snapshot(name: String) {
         rule.waitForIdle()
         val inst = InstrumentationRegistry.getInstrumentation()
-        val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+        val root = if (state.profileFormOpen) rule.onNode(isDialog()) else rule.onRoot()
+        val bitmap = root.captureToImage().asAndroidBitmap()
         val output = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
         val file =
             if (output != null) File(output, "$name.png")
@@ -31,29 +32,20 @@ class StimulateFlowTest {
     }
 
     private fun finishHeadsetCheck() {
-        repeat(4) {
-            rule.waitUntil(12000) {
-                rule.mainClock.advanceTimeBy(100)
-                state.closedLoop ||
-                    listOf("ปรับแล้ว", "แก้แล้ว", "สัญญาณดี · เปิด Closed-loop").any { label ->
+        var lastAction = 0L
+        rule.waitUntil(20000) {
+            rule.mainClock.advanceTimeBy(100)
+            if (!state.closedLoop && android.os.SystemClock.elapsedRealtime() - lastAction >= 500) {
+                val action =
+                    listOf("สัญญาณดี · เปิด Closed-loop", "ปรับแล้ว", "แก้แล้ว").firstOrNull { label
+                        ->
                         rule.onAllNodesWithText(label).fetchSemanticsNodes().isNotEmpty()
                     }
+                if (action != null) {
+                    rule.onNodeWithText(action).performScrollTo().performClick()
+                    lastAction = android.os.SystemClock.elapsedRealtime()
+                }
             }
-            if (state.closedLoop) return
-            when {
-                rule.onAllNodesWithText("ปรับแล้ว").fetchSemanticsNodes().isNotEmpty() ->
-                    rule.onNodeWithText("ปรับแล้ว").performClick()
-                rule.onAllNodesWithText("แก้แล้ว").fetchSemanticsNodes().isNotEmpty() ->
-                    rule.onNodeWithText("แก้แล้ว").performClick()
-                else ->
-                    rule
-                        .onNodeWithText("สัญญาณดี · เปิด Closed-loop")
-                        .performScrollTo()
-                        .performClick()
-            }
-        }
-        rule.waitUntil(12000) {
-            rule.mainClock.advanceTimeBy(100)
             state.closedLoop
         }
     }
@@ -190,6 +182,71 @@ class StimulateFlowTest {
         }
         rule.runOnIdle {
             state.theme = "light"
+            state.editProfile(null)
+            state.profileOpen = true
+        }
+        rule.onNodeWithText("เริ่มใช้งาน").performScrollTo().performClick()
+        rule.onNodeWithText("กรอกชื่อจริง").assertIsDisplayed()
+        rule.onNodeWithText("ยกเลิก").performScrollTo().performClick()
+        var originalProfile = ""
+        rule.runOnIdle {
+            originalProfile = state.currentProfile
+            state.editProfile(
+                Profile(
+                    "P-TEST",
+                    "Profile Test",
+                    age = 9,
+                    realName = "Profile Test Person",
+                    sex = "female",
+                    birth = "2017-01-02",
+                    hand = "left",
+                    guardianName = "Parent",
+                    guardianRelation = "แม่",
+                    guardianPhone = "0812345678",
+                )
+            )
+        }
+        rule.onNodeWithText("Profile Test").performTextReplacement("Updated profile")
+        rule.onNodeWithText("แก้ไขข้อมูล").assertIsDisplayed()
+        snapshot("13-profile-form")
+        rule.onNodeWithText("บันทึก").performScrollTo().performClick()
+        rule.waitUntil(10000) { !state.profileFormOpen }
+        rule.runOnIdle {
+            val saved =
+                profileFrom(
+                    state.repo.read("data.guest").getJSONArray("profiles").objects().first {
+                        it.getString("id") == "P-TEST"
+                    }
+                )
+            assertEquals("Updated profile", saved.name)
+            assertEquals("2017-01-02", saved.birth)
+            assertEquals("female", saved.sex)
+            assertEquals("left", saved.hand)
+            assertEquals("0812345678", saved.guardianPhone)
+            state.switchProfile(originalProfile)
+            state.profiles.removeAll { it.id == "P-TEST" }
+            state.closedLoop = true
+            state.start(
+                listOf(
+                    Program("closed-loop-test", "Closed-loop test", steps = listOf(Step(dur = 10)))
+                )
+            )
+            state.pause()
+        }
+        rule.onNodeWithText("หลับตา").assertIsDisplayed()
+        snapshot("14-closed-loop-baseline")
+        rule.onNodeWithText("Resume").performClick()
+        rule.waitUntil(15000) { state.engine == null }
+        rule.runOnIdle {
+            val last = state.history.last()
+            assertTrue(last.closedLoop)
+            assertTrue(last.iapf in 9.3..10.5)
+            assertEquals(1, last.alphaTrace.size)
+            assertEquals(4, last.deltas.size)
+            assertTrue(last.events.isNotEmpty())
+        }
+        snapshot("15-closed-loop-summary")
+        rule.runOnIdle {
             state.navigate(Screen.HOME)
             state.category = "relax"
             state.pro = false
