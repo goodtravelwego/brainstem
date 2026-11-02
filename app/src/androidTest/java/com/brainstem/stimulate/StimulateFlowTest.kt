@@ -90,7 +90,7 @@ class StimulateFlowTest {
         rule.onNodeWithText("All", useUnmergedTree = true).performClick()
         snapshot("05-quick-start")
         rule.onNodeWithText("Sweep", useUnmergedTree = true).performClick()
-        rule.onNodeWithText("Broad", useUnmergedTree = true).performClick()
+        rule.onNodeWithText("Broad", useUnmergedTree = true).performScrollTo().performClick()
         rule.runOnIdle {
             assertEquals(1.0, state.quick.f1, 0.0)
             assertEquals(45.0, state.quick.f2, 0.0)
