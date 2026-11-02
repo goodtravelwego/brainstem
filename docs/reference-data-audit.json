@@ -1,0 +1,10 @@
+{
+  "reference": "https://brainstem-monitor.netlify.app/app/",
+  "date": "2026-11-02",
+  "presetCount": 11,
+  "stepCount": 23,
+  "matches": true,
+  "differences": [],
+  "pbmSourceChanged": false,
+  "publicPbmSha256": "059b4e2ce36b6073d3a1ed6335fc2b4bf0099d7c8c9cf9881b0cf6602b7033d9"
+}

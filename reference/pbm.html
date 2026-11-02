@@ -1,0 +1,1656 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}.hw{display:none!important}</style>
+<title>BrainSTEM PBM</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: consumer phone app (missions, score, stickers) beside a small hardware rail. Technical detail lives in the gear menu "ระบบหลังบ้าน". */
+:root{
+  --bg:#E9EFEC; --surface:#FFFFFF; --surface-2:#EEF3F1; --ink:#13302A; --muted:#5F756F; --line:#D8E2DE;
+  --signal:#1B7666; --on-signal:#FFFFFF; --bird:#E09A12; --bird-ink:#7A5200; --std:#879A95;
+  --danger:#B13E2C; --ok:#2C7A4C; --warn:#9A6200; --bezel:#121816; --app-bg:#F6F8F7;
+  --th:#3D6FB4;
+  --f-display:"Mitr","IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0A1110; --surface:#16221F; --surface-2:#1C2B27; --ink:#E1ECE8; --muted:#93A9A2; --line:#2A3B37;
+  --signal:#4DBFA6; --on-signal:#062019; --bird:#F2B63A; --bird-ink:#F8D78E; --std:#7C908A;
+  --danger:#E8735E; --ok:#62C189; --warn:#E3A63D; --bezel:#2A3431; --app-bg:#101A18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A1110; --surface:#16221F; --surface-2:#1C2B27; --ink:#E1ECE8; --muted:#93A9A2; --line:#2A3B37;
+  --signal:#4DBFA6; --on-signal:#062019; --bird:#F2B63A; --bird-ink:#F8D78E; --std:#7C908A;
+  --danger:#E8735E; --ok:#62C189; --warn:#E3A63D; --bezel:#2A3431; --app-bg:#101A18; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 40px}
+.stage{display:flex;gap:36px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.phone{width:396px;flex:none;background:var(--bezel);border-radius:54px;padding:12px;position:relative;box-shadow:0 24px 60px -24px rgba(10,30,25,.45)}
+.island{position:absolute;top:22px;left:50%;transform:translateX(-50%);width:110px;height:30px;background:#000;border-radius:20px;z-index:3}
+.screen{background:var(--app-bg);border-radius:43px;height:800px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.status{height:50px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 6px 34px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.status .ic{display:flex;gap:6px;align-items:center}
+.batt{width:24px;height:11px;border:1.5px solid var(--ink);border-radius:3px;position:relative;opacity:.85}
+.batt::after{content:"";position:absolute;inset:1.5px;right:5px;background:var(--ink);border-radius:1px}
+.appbar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 18px 10px;min-height:52px}
+.appbar h1{font-family:var(--f-display);font-weight:500;font-size:19px;margin:0;flex:1}
+.iconbtn{width:36px;height:36px;border-radius:50%;border:0;background:var(--surface);color:var(--ink);cursor:pointer;display:grid;place-items:center;flex:none}
+.iconbtn svg{width:19px;height:19px}
+.views{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 16px 24px;scrollbar-width:thin}
+.view{display:flex;flex-direction:column;gap:12px}
+h2,h3{font-family:var(--f-display);font-weight:500;margin:0;text-wrap:balance}
+h2{font-size:17px} h3{font-size:14.5px}
+.card{background:var(--surface);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:12px;color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.btn{font:inherit;font-family:var(--f-display);font-weight:500;font-size:16px;border-radius:18px;padding:14px 16px;cursor:pointer;border:0;background:var(--surface);color:var(--ink);width:100%}
+.btn.pri{background:var(--th);color:#fff}
+.btn.sm{font-family:var(--f-body);font-size:13px;padding:8px 12px;border-radius:12px;width:auto;background:var(--surface-2)}
+.btn.link{background:transparent;font-family:var(--f-body);font-size:13px;color:var(--muted);padding:6px;text-decoration:underline;text-underline-offset:3px}
+.btn:focus-visible,.seg button:focus-visible,.iconbtn:focus-visible,.hwbtn:focus-visible,.tg:focus-visible{outline:2px solid var(--bird);outline-offset:2px}
+.seg{display:flex;background:var(--surface-2);border-radius:13px;padding:3px;gap:3px}
+.seg button{flex:1;font:inherit;font-size:13.5px;padding:8px 6px;border:0;border-radius:10px;background:transparent;color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:500}
+.err{font-size:12.5px;color:var(--danger)}
+/* consumer */
+.hello{font-family:var(--f-display);font-size:24px;line-height:1.25}
+.ready{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--ok) 14%,var(--surface));color:var(--ok);font-weight:500}
+.ready.warn{background:color-mix(in srgb,var(--warn) 14%,var(--surface));color:var(--warn)}
+.mission{background:color-mix(in srgb,var(--th) 16%,var(--surface));border-radius:26px;padding:18px;display:flex;flex-direction:column;gap:6px;position:relative}
+.mission .hero{width:100%;height:auto;max-height:150px}
+.mission .tag{font-size:12px;color:var(--th);font-weight:600;letter-spacing:.3px}
+.mission h2{font-size:22px}
+.shuffle{position:absolute;top:14px;right:14px}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stat3 b{display:block;font-family:var(--f-display);font-weight:500;font-size:22px;line-height:1.2}
+.bars{display:flex;align-items:flex-end;gap:6px;height:64px}
+.bars i{flex:1;background:color-mix(in srgb,var(--th) 35%,var(--surface-2));border-radius:6px 6px 3px 3px;min-height:4px}
+.bars i.now{background:var(--th)}
+.stickers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stk{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--muted);text-align:center}
+.stk .b{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2)}
+.stk .b svg{width:46px;height:46px}
+.stk.off .b{filter:grayscale(1);opacity:.4}
+.ringwrap{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.ring text{font-family:var(--f-display)}
+.meter{display:grid;grid-template-columns:52px 1fr 34px;gap:10px;align-items:center;font-size:13.5px}
+.meter .tr{height:10px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.meter .tr i{display:block;height:100%;border-radius:6px;background:var(--th)}
+.meter b{font-family:var(--f-mono);font-weight:500;text-align:right;font-size:13px}
+.stars{font-family:var(--f-display);font-size:32px;color:var(--bird);letter-spacing:2px;text-align:center;line-height:1.2}
+.bigq{font-family:var(--f-display);font-size:19px;text-align:center;margin:0}
+.delta{font-family:var(--f-display);font-size:14px;color:var(--ok)}
+.delta.down{color:var(--warn)}
+/* training */
+.games{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.game{background:var(--surface);border-radius:20px;padding:14px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;border:0;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.game:focus-visible{outline:2px solid var(--bird);outline-offset:2px}
+.game .gi{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;margin-bottom:4px}
+.game .gi svg{width:26px;height:26px}
+.game b{font-family:var(--f-display);font-weight:500;font-size:15.5px}
+.fbtxt{font-family:var(--f-display);font-size:26px;text-align:center;min-height:40px;line-height:1.4}
+.dial{position:relative;height:30px;border-radius:10px;background:var(--surface);overflow:hidden}
+.dial span{position:absolute;top:0;bottom:0}
+.dial .z2{left:25%;width:50%;background:color-mix(in srgb,var(--th) 18%,transparent)}
+.dial .z1{left:37.5%;width:25%;background:color-mix(in srgb,var(--ok) 30%,transparent)}
+.dial .c{left:50%;width:1px;background:var(--muted)}
+.dial .nd{top:3px;bottom:3px;width:5px;margin-left:-2.5px;border-radius:3px;background:var(--ink);left:50%;transition:left .12s}
+.track{position:relative;height:46px;border-radius:12px;background:var(--surface);overflow:hidden}
+.track .ln{position:absolute;left:0;right:0;top:50%;border-top:2px dashed var(--line)}
+.track svg{position:absolute;top:7px;left:-60px;width:56px;height:32px}
+.prog{height:6px;border-radius:4px;background:var(--surface);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--th);width:0}
+.cnts{display:flex;justify-content:center;gap:18px;font-family:var(--f-mono);font-size:14px}
+.srow{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.srow b{font-family:var(--f-mono);font-weight:500}
+/* friendly */
+.hero-row{display:flex;align-items:flex-end;gap:10px}
+.owl{width:76px;height:76px;flex:none}
+.owl.bob{animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.bubble{position:relative;background:var(--surface);border-radius:18px 18px 18px 6px;padding:10px 14px;font-size:14.5px;line-height:1.45;flex:1;min-width:0;margin-bottom:14px}
+.bubble b{font-family:var(--f-display);font-weight:500}
+.tipcard{background:color-mix(in srgb,var(--bird) 12%,var(--surface));border-radius:18px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:13.5px}
+.tipcard .ti{font-family:var(--f-display);color:var(--bird-ink);font-size:13px;white-space:nowrap}
+.ob{position:absolute;inset:0;z-index:20;background:rgba(10,20,18,.45);display:flex;align-items:flex-end}
+.ob-card{background:var(--app-bg);width:100%;border-radius:28px 28px 0 0;padding:22px 20px 26px;display:flex;flex-direction:column;gap:12px;text-align:center;align-items:center}
+.ob-card .owl{width:96px;height:96px}
+.ob-card h2{font-size:21px}
+.ob-card p{margin:0;font-size:14.5px;color:var(--muted);max-width:30em}
+.ob-dots{display:flex;gap:6px}.ob-dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.ob-dots i.on{background:var(--th);width:22px;border-radius:4px}
+.ob-list{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left}
+.ob-list div{display:flex;gap:10px;align-items:center;background:var(--surface);border-radius:14px;padding:10px 12px;font-size:13.5px}
+.ob-list b{font-family:var(--f-display);font-weight:500;color:var(--th);min-width:22px}
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:15}
+.confetti i{position:absolute;top:-20px;font-style:normal;font-size:18px;animation:fall 2.4s ease-in forwards}
+@keyframes fall{to{transform:translateY(820px) rotate(320deg);opacity:.2}}
+@media (prefers-reduced-motion:reduce){.owl.bob{animation:none}.confetti{display:none}}
+@media (max-width:560px){.ob{position:fixed}}
+.pill{display:inline-flex;align-items:center;font-size:11.5px;padding:2px 9px;border-radius:999px;border:1px solid currentColor;font-weight:500;white-space:nowrap}
+.pill.ok{color:var(--ok)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--danger)} .pill.ex{color:var(--bird-ink);border-color:var(--bird)}
+/* profiles + care mode */
+.who{display:inline-flex;align-items:center;gap:8px;border:0;background:var(--surface);border-radius:999px;padding:5px 12px 5px 5px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-display);font-size:14px;flex:none}
+.plist{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left}
+.prow{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:10px 12px;border:0;font:inherit;color:var(--ink);cursor:pointer;width:100%;text-align:left}
+.prow.on{box-shadow:inset 0 0 0 2px var(--th)}
+.prow .t{flex:1;min-width:0}.prow b{font-weight:500;display:block}
+.pform{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left;background:var(--surface);border-radius:16px;padding:12px}
+.care{font-size:16px}
+.care .owl,.care .confetti{display:none!important}
+.care .hello{font-size:26px}
+.care .btn{font-size:18px;padding:16px}
+.care .btn.sm{font-size:15px;padding:10px 14px}
+.care .act .t b{font-size:17.5px}
+.care .note{font-size:14px}
+.care .bubble{margin-bottom:0;font-size:16px;border-radius:18px}
+.care .tipcard{font-size:15px}
+.care .fbtxt{font-size:28px}
+.care h2{font-size:20px}
+/* headset check */
+#ck-head{width:100%;max-width:300px;height:auto;align-self:center}
+#ck-head .el{cursor:pointer}
+#ck-head text{font-family:var(--f-mono);font-size:10px;font-weight:500}
+.ckrow{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-radius:14px;padding:10px 12px}
+.ckrow .ic{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:14px;background:var(--surface);color:var(--muted)}
+.ckrow.ok .ic{background:color-mix(in srgb,var(--ok) 18%,var(--surface));color:var(--ok)}
+.ckrow.wait .ic{background:color-mix(in srgb,var(--th) 18%,var(--surface));color:var(--th)}
+.ckrow.bad .ic{background:color-mix(in srgb,var(--danger) 16%,var(--surface));color:var(--danger)}
+.ckrow .t{flex:1;min-width:0}.ckrow .t b{display:block;font-weight:500;font-size:14px}
+.zlist{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.zlist div{border-radius:10px;padding:5px 4px;text-align:center;background:var(--surface-2);font-size:12px}
+.zlist b{display:block;font-family:var(--f-mono);font-size:12.5px}
+/* plan */
+.act{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:10px 12px;border:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer;width:100%}
+.act:focus-visible{outline:2px solid var(--bird);outline-offset:2px}
+.act .ai{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--surface-2)}
+.act .ai svg{width:40px;height:40px}
+.act .t{flex:1;min-width:0}.act .t b{display:block;font-family:var(--f-display);font-weight:500;font-size:15px}
+.act .st{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--ink);white-space:nowrap}
+.act.done .st{background:color-mix(in srgb,var(--ok) 16%,var(--surface));color:var(--ok)}
+.act.next{box-shadow:inset 0 0 0 2px var(--th)}
+/* admin */
+.admin .card{border-radius:16px;gap:8px}
+.adm-h{font-size:11.5px;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-top:4px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+input[type=text],input[type=number]{font:inherit;font-size:15px;color:var(--ink);background:var(--surface-2);border:1px solid transparent;border-radius:10px;padding:8px 10px;width:100%}
+input:focus{outline:2px solid var(--signal);outline-offset:0}
+input[type=range]{width:100%;accent-color:var(--signal)}
+.elec{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.el{border:1px solid var(--line);border-radius:12px;padding:6px 4px;text-align:center}
+.el b{display:block;font-family:var(--f-mono);font-size:13px}
+.el small{font-family:var(--f-mono);font-size:11.5px;color:var(--ok)}
+.el.mid small{color:var(--warn)} .el.key{border-color:var(--signal);border-width:1.5px}
+.el .r{font-size:10.5px;color:var(--muted)}
+canvas#live{width:100%;height:170px;display:block;background:var(--surface-2);border-radius:12px}
+.legend{display:flex;gap:10px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
+.sw{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.tiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.tile{background:var(--surface-2);border-radius:12px;padding:8px}
+.tile .k{font-size:11px;color:var(--muted)}
+.tile .v{font-family:var(--f-mono);font-size:16px;font-weight:500}
+.tile .v small{font-size:10.5px;color:var(--muted);font-weight:400;margin-left:2px}
+svg.erp{width:100%;height:auto;display:block}
+svg.erp text{font-family:var(--f-mono);font-size:10.5px;fill:var(--muted)}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini>div{min-width:0}
+.tg{font:inherit;font-size:11.5px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:3px 9px;cursor:pointer}
+.tg[aria-pressed=false]{opacity:.45}
+.strip{display:flex;flex-wrap:wrap;gap:3px}
+.strip i,.sq{width:10px;height:10px;border-radius:3px;display:inline-block}
+.hit{background:var(--signal)} .miss{border:1.5px solid var(--signal)} .cnt{background:var(--std)}
+.rej{background:repeating-linear-gradient(45deg,var(--danger) 0 2px,transparent 2px 4px);border:1px solid var(--danger)}
+ul.interp{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+table.hist{width:100%;border-collapse:collapse;font-size:12px}
+table.hist th,table.hist td{text-align:left;padding:5px 3px;border-bottom:1px solid var(--line)}
+table.hist .r{text-align:right}
+textarea#copyfb{width:100%;height:110px;font-family:var(--f-mono);font-size:11px;background:var(--surface-2);color:var(--ink);border:0;border-radius:10px}
+/* hardware rail */
+.hw{width:270px;display:flex;flex-direction:column;gap:14px;padding-top:30px}
+.hw h2{font-size:15px}
+.hwcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.hwbtn{width:150px;height:150px;border-radius:50%;border:0;background:var(--bird);color:#3B2600;font-family:var(--f-display);font-size:22px;cursor:pointer;box-shadow:0 8px 0 var(--bird-ink),0 0 0 10px var(--surface-2);align-self:center;margin:8px 0 12px;transition:transform .06s,box-shadow .06s;touch-action:manipulation;user-select:none}
+.hwbtn.down{transform:translateY(6px);box-shadow:0 2px 0 var(--bird-ink),0 0 0 10px var(--surface-2)}
+.hwbtn:disabled{opacity:.45;cursor:default}
+.spk{display:flex;align-items:center;gap:8px}
+.spk i{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.spk i.on{background:var(--signal)}
+@media (prefers-reduced-motion:reduce){.hwbtn{transition:none}}
+@media (max-width:560px){
+  body{padding-block:8px 32px}
+  .phone{width:100%;background:transparent;padding:0;border-radius:0;box-shadow:none}
+  .island,.status{display:none}
+  .screen{height:auto;border-radius:0;background:transparent;overflow:visible}
+  .appbar{padding-inline:0}
+  .views{overflow:visible;padding:2px 0 16px}
+  .hw{width:100%;padding-top:0}
+}
+/* EEG assessment additions */
+.fix{width:22px;height:22px;border-radius:50%;background:var(--ink);margin:6px auto;box-shadow:0 0 0 10px color-mix(in srgb,var(--ink) 10%,transparent)}
+.stepper{display:flex;gap:6px}
+.stepper span{flex:1;height:6px;border-radius:4px;background:var(--surface)}
+.stepper span.on{background:var(--th)}
+.stepper span.done{background:color-mix(in srgb,var(--th) 55%,var(--surface))}
+.qchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--surface)}
+.qchip i{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.qchip.warn i{background:var(--warn)}
+.dom{display:flex;flex-direction:column;gap:6px;background:var(--surface);border-radius:18px;padding:14px}
+.dom .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dom b{font-family:var(--f-display);font-weight:500;font-size:16px}
+.lvl3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.lvl3 span{height:8px;border-radius:4px;background:var(--surface-2)}
+.lvl3.l0 span:nth-child(1){background:var(--ok)}
+.lvl3.l1 span:nth-child(2){background:var(--warn)}
+.lvl3.l2 span:nth-child(3){background:var(--danger)}
+.lvl3lab{display:grid;grid-template-columns:repeat(3,1fr);font-size:11.5px;color:var(--muted);text-align:center}
+.tag2{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px}
+.tag2.l0{background:color-mix(in srgb,var(--ok) 15%,var(--surface));color:var(--ok)}
+.tag2.l1{background:color-mix(in srgb,var(--warn) 15%,var(--surface));color:var(--warn)}
+.tag2.l2{background:color-mix(in srgb,var(--danger) 13%,var(--surface));color:var(--danger)}
+.prog-rec{background:color-mix(in srgb,var(--th) 14%,var(--surface));border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.prog-rec h2{font-size:20px}
+.mtab{width:100%;border-collapse:collapse;font-size:12px}
+.mtab td,.mtab th{padding:5px 3px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.mtab .r{text-align:right;font-family:var(--f-mono);white-space:nowrap}
+.flag{font-size:11px;padding:1px 6px;border-radius:6px}
+.flag.l0{color:var(--ok)} .flag.l1{color:var(--warn)} .flag.l2{color:var(--danger)}
+
+.tiles3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile3{background:var(--surface);border-radius:16px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:12.5px;color:var(--muted);line-height:1.35}
+.tile3 b{font-family:var(--f-display);font-weight:500;font-size:15px;color:var(--ink)}
+.tile3 .ico,.ico{color:var(--th);display:grid;place-items:center}
+.ico-s{color:var(--th);display:inline-grid;place-items:center}
+.ico-xl{color:var(--th);width:72px;height:72px;border-radius:50%;background:var(--surface);display:grid;place-items:center}
+details.dom2{background:var(--surface);border-radius:18px;padding:12px 14px}
+details.dom2 summary{list-style:none;display:flex;align-items:center;gap:12px;cursor:pointer}
+details.dom2 summary::-webkit-details-marker{display:none}
+details.dom2 summary b{flex:1;font-family:var(--f-display);font-weight:500;font-size:16px}
+details.dom2 .chev{color:var(--muted);transition:transform .15s;font-size:20px}
+details.dom2[open] .chev{transform:rotate(90deg)}
+details.dom2 .dd{display:flex;flex-direction:column;gap:8px;padding:10px 0 2px 52px;font-size:14px}
+.di{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+.di.l0{background:color-mix(in srgb,var(--ok) 15%,var(--surface));color:var(--ok)}
+.di.l1{background:color-mix(in srgb,var(--warn) 15%,var(--surface));color:var(--warn)}
+.di.l2{background:color-mix(in srgb,var(--danger) 13%,var(--surface));color:var(--danger)}
+
+.fixov{position:absolute;inset:0;z-index:30;background:var(--fixbg);display:grid;place-items:center;cursor:pointer}
+.fdot{width:14px;height:14px;border-radius:50%;background:var(--fixdot)}
+.fhint{position:absolute;top:calc(50% + 28px);left:0;right:0;text-align:center;font-size:14px;color:var(--fixdot);opacity:.6;transition:opacity 1s}
+.fhint.gone{opacity:0}
+.fctl{position:absolute;bottom:34px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:10px;opacity:0;transition:opacity .3s;pointer-events:none}
+.fctl.show{opacity:1;pointer-events:auto}
+.fctl span{color:var(--fixdot);font-size:13px}
+@media (max-width:560px){.fixov{position:fixed}}
+.explain{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);background:var(--surface-2);border-radius:12px;padding:8px 10px}
+.mcard{gap:6px}
+.mcard b{font-family:var(--f-display);font-weight:500;font-size:15.5px}
+.sbar{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:center;margin-top:3px}
+.sbar .sl{font-size:11.5px;color:var(--muted)}
+.sbar .st{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--surface-2)}
+.sbar .st i{display:block;height:100%}
+.qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qcol{display:flex;flex-direction:column;gap:4px;align-items:center}
+.qbars{display:flex;gap:5px;height:70px;align-items:flex-end}
+.qb{display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;justify-content:flex-end}
+.qb i{display:block;width:14px;border-radius:4px 4px 2px 2px}
+.qb span{font-size:9.5px;font-family:var(--f-mono);color:var(--muted)}
+
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:18px 16px 14px;background:#0F2A33;color:#fff;display:flex;flex-direction:column;gap:6px}
+.hero::before{content:"";position:absolute;inset:-40% -30% auto auto;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(127,216,196,.28),rgba(127,216,196,0) 70%)}
+.htag{font-size:12px;letter-spacing:.6px;color:#F5A394;font-weight:600}
+.hpill{font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff}
+.hname{font-family:var(--f-display);font-size:21px}
+.hsub{font-size:12px;color:rgba(255,255,255,.65)}
+#hwave{width:100%;height:56px;display:block;margin:2px 0 -6px}
+#radar{width:100%;height:auto;display:block}
+.hleg{display:flex;gap:14px;align-items:center;font-size:12px;color:rgba(255,255,255,.75);flex-wrap:wrap}
+.hleg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.hleg i.dash{background:repeating-linear-gradient(90deg,rgba(255,255,255,.6) 0 4px,transparent 4px 7px)}
+.hscore{margin-left:auto}.hscore b{font-family:var(--f-display);font-size:22px;font-weight:500;color:#F5A394;margin-left:6px}
+.rpoly{transform-origin:150px 128px;animation:rgrow .9s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rgrow{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+.mk{animation:slide .9s cubic-bezier(.2,.8,.2,1) .15s both}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(var(--dx))}}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:drawl 1.2s ease-out forwards}
+@keyframes drawl{to{stroke-dashoffset:0}}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.donuts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.donut{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--muted)}
+.donut svg{width:100%;max-width:120px}
+details.more summary{cursor:pointer;font-size:13px;color:var(--th);list-style:none;margin-top:4px}
+details.more summary::-webkit-details-marker{display:none}
+@media (prefers-reduced-motion:reduce){.rpoly,.draw,.pulse{animation:none;stroke-dashoffset:0}.mk{animation:none;transform:translateX(var(--dx))}}
+
+/* ---- modern refresh ---- */
+:root{--navy:#0F2A33;--mint:#F5A394}
+.views{padding-top:4px}
+.card{border:1px solid var(--line);box-shadow:0 1px 2px rgba(15,42,51,.04);border-radius:22px}
+.btn.pri{background:var(--navy);color:#fff;border-radius:16px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.pri{background:var(--mint);color:var(--navy)}}
+:root[data-theme="dark"] .btn.pri{background:var(--mint);color:var(--navy)}
+.seg{border-radius:14px}
+.seg button[aria-pressed=true]{background:var(--navy);color:#fff;box-shadow:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button[aria-pressed=true]{background:var(--mint);color:var(--navy)}}
+:root[data-theme="dark"] .seg button[aria-pressed=true]{background:var(--mint);color:var(--navy)}
+.hello{font-size:26px;letter-spacing:-.2px}
+.hw2{width:100%;height:64px;display:block}
+.hsteps{display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative;z-index:1}
+.hstep{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 11px;color:#F5A394;font-size:12.5px}
+.hstep b{color:#fff;font-weight:500}.hstep em{font-style:normal;color:rgba(255,255,255,.6)}
+.harr{color:rgba(255,255,255,.35)}
+.hbtn{display:flex;justify-content:space-between;align-items:center;background:#F5A394;color:#0F2A33;border-radius:16px;position:relative;z-index:1;margin-top:4px}
+.hmin{font-family:var(--f-body);font-size:13px;opacity:.75}
+.lastc .lscore{font-family:var(--f-display);font-size:34px;line-height:1.1}.lastc .lscore small{font-size:14px;color:var(--muted);margin-left:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip2{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.dlist{padding:6px 14px;gap:0}
+.drow{border-bottom:1px solid var(--line);padding:12px 0}.drow:last-child{border-bottom:0}
+.drow summary{display:flex;gap:12px;align-items:center;list-style:none;cursor:pointer}.drow summary::-webkit-details-marker{display:none}
+.drow .dm{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.drow b{font-family:var(--f-display);font-weight:500;font-size:15.5px}
+.dv{font-family:var(--f-display);font-size:18px;display:inline-flex;align-items:center;gap:6px}
+.dlt{font-family:var(--f-mono);font-size:11px}.dlt.up{color:var(--ok)}.dlt.dn{color:var(--warn)}
+.dbar{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.dbar i{display:block;height:100%;border-radius:4px;animation:grow 1s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
+.dbar i.l0{background:var(--ok)}.dbar i.l1{background:var(--warn)}.dbar i.l2{background:var(--danger)}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.drow .dd{padding:8px 0 0 52px;font-size:13.5px;color:var(--muted)}
+.progx{display:flex;gap:14px;align-items:flex-start;background:var(--navy);color:#fff;border-radius:22px;padding:16px}
+.pxi{width:44px;height:44px;border-radius:14px;background:rgba(127,216,196,.15);color:#F5A394;display:grid;place-items:center;flex:none}
+.pxi .ico-s{color:#F5A394}
+.pxn{font-family:var(--f-display);font-size:22px;margin:2px 0}
+.pxd{font-size:13.5px;color:rgba(255,255,255,.78)}.pxs{font-size:12.5px;color:rgba(255,255,255,.55);margin-top:6px}
+.mc2{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.mc2 b{font-family:var(--f-display);font-weight:500;font-size:15.5px}
+.mbig{font-family:var(--f-display);font-size:36px;line-height:1;letter-spacing:-.5px;display:flex;align-items:baseline;gap:8px}
+.mbig small{font-family:var(--f-body);font-size:12.5px;color:var(--muted);letter-spacing:0}
+.mp{margin:0;font-size:13.5px;color:var(--muted)}
+details.fx summary{font-size:12px;color:var(--th);cursor:pointer;list-style:none}details.fx summary::-webkit-details-marker{display:none}
+details.fx span{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.calmov{position:absolute;inset:0;z-index:30;background:#0F2A33;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;cursor:pointer;text-align:center;padding:0 24px}
+.calmov .cico{width:72px;height:72px;border-radius:50%;background:rgba(127,216,196,.12);color:#F5A394;display:grid;place-items:center}
+.calmov .ctitle{font-family:var(--f-display);font-size:22px}
+.calmov .csub{font-size:14px;color:rgba(255,255,255,.6)}
+.calmov .fctl span{color:#fff}
+@media (max-width:560px){.calmov{position:fixed}}
+@media (prefers-reduced-motion:reduce){.dbar i{animation:none}}
+
+/* ---- v7: check, fixation clock, charts ---- */
+.fclock{position:absolute;bottom:22px;right:22px;font-family:var(--f-mono);font-size:13px;color:var(--fixdot);opacity:.45;letter-spacing:.5px}
+.fixov .fctl{bottom:56px}
+.hmeter{position:relative;width:64px;height:8px;border-radius:4px;background:var(--surface);flex:none}
+.hmeter i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;transition:width .4s}
+.hmeter em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted);border-radius:1px}
+.ckrow.opt{opacity:.85}.ckrow.opt .t b{font-weight:500}
+.humtip{display:flex;flex-direction:column;gap:6px;background:color-mix(in srgb,var(--danger) 8%,var(--surface));border-radius:14px;padding:10px 12px;font-size:13px}
+.humtip span{display:flex;gap:8px;align-items:center;color:var(--muted)}.humtip span svg{color:var(--danger);flex:none}
+.humtip .btn{align-self:flex-start;margin-top:2px}
+.humrow{display:flex;gap:10px;align-items:center;margin:4px 0 6px}.humrow b{display:block;font-weight:500;font-size:14px}.humrow .di{width:34px;height:34px;border-radius:10px}
+.tgl{display:flex;gap:6px;flex-wrap:wrap}
+.tgl button{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}
+.tgl button i{display:inline-block;width:14px;height:3px;border-radius:2px}
+.tgl button[aria-pressed=false]{opacity:.5}.tgl button[aria-pressed=false] i{filter:grayscale(1)}
+.tgl button[aria-pressed=true]{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 25%,var(--line))}
+.psdwrap{position:relative}
+.ptip{position:absolute;top:24px;min-width:128px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.12);pointer-events:none}
+.ptip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+#psd{touch-action:pan-y}
+.bleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--muted)}
+.bleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.sb3{display:grid;grid-template-columns:70px 1fr;gap:10px;align-items:center}
+.sl3{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink)}.sl3 svg{color:var(--muted)}
+.st3{display:flex;gap:2px;height:28px}
+.st3 i{display:flex;align-items:center;justify-content:center;font-style:normal;font-family:var(--f-mono);font-size:11px;min-width:3px;overflow:hidden;transform-origin:left;animation:grow .8s cubic-bezier(.2,.8,.2,1) both}
+.st3 i:first-child{border-radius:8px 0 0 8px}.st3 i:last-child{border-radius:0 8px 8px 0}
+.chgs{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.chg{display:grid;grid-template-columns:10px 1fr auto;grid-template-areas:"d t x" "d v x";column-gap:10px;align-items:center;background:var(--surface-2);border-radius:14px;padding:9px 12px}
+.cdot{grid-area:d;width:10px;height:10px;border-radius:3px}.ct{grid-area:t;font-size:13.5px}.cv{grid-area:v;font-size:11.5px;color:var(--muted)}.cv b{color:var(--ink)}.carr{opacity:.6}
+.cx{grid-area:x;font-family:var(--f-mono);font-size:12.5px;padding:3px 9px;border-radius:999px}
+.cx.up{background:color-mix(in srgb,var(--ok) 15%,var(--surface));color:var(--ok)}.cx.dn{background:color-mix(in srgb,var(--warn) 15%,var(--surface));color:var(--warn)}
+.trow{padding:10px 0;border-bottom:1px solid var(--line)}.trow:last-child{border-bottom:0}
+.thd{display:flex;align-items:center;gap:10px}
+.tdi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--th) 14%,var(--surface));color:var(--th);flex:none}
+.tnm{flex:1;min-width:0;display:flex;flex-direction:column}.tnm b{font-family:var(--f-display);font-weight:500;font-size:15px}.tnm .note{font-size:11.5px}
+.tval{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.tval b{font-family:var(--f-display);font-weight:500;font-size:22px;line-height:1}
+.tch{font-family:var(--f-mono);font-size:11px;color:var(--muted)}.tch.up{color:var(--ok)}.tch.dn{color:var(--warn)}
+.tsvg{width:100%;height:auto;display:block;margin-top:6px}
+@media (prefers-reduced-motion:reduce){.st3 i{animation:none}}
+
+/* ===== PBM module ===== */
+.nfhw{width:320px}
+.seg.mini button{font-size:12.5px;padding:6px 10px}
+.hs{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px 5px 8px;font-size:12px;color:var(--muted)}
+.hs b{color:var(--ink);font-weight:600;font-family:var(--f-mono);font-size:12px}
+.hs .bt{position:relative;width:22px;height:11px;border:1.5px solid var(--ink);border-radius:3px;padding:1px}.hs .bt::after{content:"";position:absolute;right:-4px;top:2.5px;width:2px;height:4px;background:var(--ink);border-radius:0 1px 1px 0}
+.hs .bt i{display:block;height:100%;background:var(--ok);border-radius:1px}
+.hhead{flex:none}
+.favb{border:0;background:transparent;color:var(--line);cursor:pointer;padding:4px;border-radius:10px;display:grid;place-items:center;flex:none}.favb.on{color:#E0A100}.favb.on svg{fill:#F2C94C}
+.chipsx{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto}.chipsx.wrap{flex-wrap:wrap}
+.chipsx button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
+.chipsx button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chipsx button.on{background:var(--mint);color:var(--navy);border-color:var(--mint)}}
+.bchip{border-left:3px solid var(--bc)!important}
+.pgc{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;cursor:pointer}
+.pgc-h{display:flex;gap:8px;align-items:flex-start}
+.pgc-n{font-family:var(--f-display);font-size:17px;line-height:1.3;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.pgc-n.big{font-size:21px}
+.pgc-m{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:4px}.pgc-m svg{vertical-align:-2px}
+.pgc-head{flex:none;margin:-4px -4px -6px 0}
+.srcb{font-family:var(--f-body);font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px}
+.s-isw{background:color-mix(in srgb,#2A8C82 18%,var(--surface));color:#B23E2C}.s-vl{background:color-mix(in srgb,#C2563A 16%,var(--surface));color:#A0412A}.s-custom{background:color-mix(in srgb,var(--th) 16%,var(--surface));color:var(--th)}
+.tline{display:flex;gap:2px;height:8px}.tline i{border-radius:3px;opacity:.85}.tline i.on{outline:2px solid var(--ink);outline-offset:1px;opacity:1}
+.tline.dk{position:relative;z-index:1}.tline.dk i.on{outline-color:#fff}
+.ph-map{display:flex;justify-content:center}.ph-map svg{max-width:100%;height:auto}
+.ph-cap{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}.ph-cap b{font-family:var(--f-display);font-weight:500}.ph-cap span{font-size:12.5px;color:var(--muted)}
+.srow,.bst{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:8px 10px;font:inherit;color:var(--ink);cursor:pointer}
+.srow.on,.bst.on{border-color:var(--navy);box-shadow:0 0 0 2px color-mix(in srgb,var(--navy) 12%,transparent)}.srow.off{opacity:.5}
+.sn{width:26px;height:26px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-size:12px;font-family:var(--f-mono);flex:none}
+.sbody{flex:1;min-width:0;display:flex;flex-direction:column}.sbody b{font-weight:500;font-size:13.5px}.sbody span{font-size:11.5px;color:var(--muted)}
+.sdur{font-size:12px;color:var(--muted)}.sdot{width:10px;height:28px;border-radius:4px;flex:none}
+.bsteps{display:flex;flex-direction:column;gap:6px}.bst-a{display:flex;gap:2px}.bst-a button{border:0;background:var(--surface-2);color:var(--muted);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;cursor:pointer}
+.frow{display:flex;gap:8px}.frow .f{flex:1}
+.pwlist{display:flex;flex-direction:column;gap:4px}.pwlist label{display:grid;grid-template-columns:36px 1fr 40px;gap:8px;align-items:center;font-size:12px}
+/* head */
+.headpbm .hh-e{fill:var(--surface-2);stroke:var(--line)}.headpbm .hh-c{fill:var(--surface-2);stroke:var(--line);stroke-width:1.5}.headpbm .hh-l{stroke:var(--line);stroke-dasharray:3 4}
+.headpbm .hp{fill:var(--surface);stroke:var(--line);stroke-width:1.2}.headpbm .hp.on{stroke:#B13E2C}.headpbm .hp.sel{stroke:var(--navy);stroke-width:2.5}
+.headpbm .hp-t{font-family:var(--f-mono);font-size:7.5px;fill:var(--muted);pointer-events:none}.headpbm .hp-t.on{fill:#fff;font-weight:600}
+.headpbm.click .hp{cursor:pointer}
+.headpbm.dark .hh-e,.headpbm.dark .hh-c{fill:rgba(255,255,255,.06);stroke:rgba(255,255,255,.2)}.headpbm.dark .hh-l{stroke:rgba(255,255,255,.12)}.headpbm.dark .hp{fill:rgba(255,255,255,.08);stroke:rgba(255,255,255,.25)}.headpbm.dark .hp-t{fill:rgba(255,255,255,.55)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .headpbm .hp.sel{stroke:var(--mint)}}
+/* run */
+.runov{position:absolute;inset:0;z-index:40;background:radial-gradient(circle at 50% 35%,#2a1f2b,#140f16 70%);color:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:52px 18px 26px;overflow-y:auto}
+@media (max-width:560px){.runov{position:fixed}}
+.r-top{display:flex;justify-content:space-between;width:100%;align-items:center}.r-prog{font-family:var(--f-display);font-size:16px}.r-left{font-size:15px;color:rgba(255,255,255,.75)}
+.r-tl{display:flex;gap:2px;height:7px;width:100%}.r-tl i{border-radius:3px;opacity:.5}.r-tl i.on{opacity:1;outline:2px solid #fff;outline-offset:1px}
+.r-head svg{max-width:100%;height:auto}
+.r-hz{display:flex;align-items:baseline;gap:6px}.r-hz b{font-family:var(--f-display);font-size:44px;font-weight:500;color:#FF8A7A;line-height:1}.r-hz span{color:rgba(255,255,255,.6)}.r-hz em{font-style:normal;font-size:12px;color:rgba(255,255,255,.6);margin-left:6px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:2px 9px}
+.r-step{display:flex;flex-direction:column;align-items:center;text-align:center}.r-step b{font-weight:500}.r-step span{font-size:12.5px;color:rgba(255,255,255,.6)}
+.r-meta{display:flex;gap:14px;font-size:12.5px;color:rgba(255,255,255,.75);flex-wrap:wrap;justify-content:center}.r-meta svg{vertical-align:-2px}
+.r-ctl{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;margin-top:auto}.r-ctl .btn{background:rgba(255,255,255,.1);color:#fff;border:0;font-size:12.5px;padding-inline:4px}
+.r-stop{width:100%;background:rgba(232,115,94,.18)!important;color:#FFB4A6!important;border:0}
+.r-pre{position:absolute;inset:0;background:#140f16;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px 18px}
+.r-pre .ctitle{font-family:var(--f-display);font-size:22px}
+.prelist{display:flex;flex-direction:column;gap:8px;width:100%}
+.pre{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);border-radius:14px;padding:10px 12px;color:rgba(255,255,255,.85);font:inherit;font-size:13px;cursor:default}
+.pre.tap{cursor:pointer}.pre .pi{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.1);flex:none;font-size:12px}
+.pre.ok .pi{background:rgba(98,193,137,.25);color:#9FE8B8}.pre.tap:not(.ok){border-color:#F2B63A}
+.r-pre .hbtn{min-width:220px;justify-content:center;background:#FF8A7A;color:#2a1015}.r-pre .hbtn:disabled{opacity:.4}
+.pbmhero{background:linear-gradient(150deg,#5A2A22,#2A1512)!important}.pbmhero::before{background:radial-gradient(circle,rgba(255,120,100,.3),rgba(255,120,100,0) 70%)!important}.pbmhero .htag{color:#FF9C8C}.pbmhero .hbtn{background:#FF8A7A;color:#2a1015}
+/* aside */
+.tbars{display:grid;grid-template-columns:repeat(19,1fr);gap:2px;height:80px;align-items:end}
+.tbars span{display:flex;flex-direction:column;justify-content:flex-end;height:100%;align-items:center;gap:2px}.tbars i{display:block;width:100%;border-radius:2px 2px 0 0;min-height:2px}
+.tbars em{font-style:normal;font-size:7px;font-family:var(--f-mono);color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg);height:22px}
+.plog{font-size:10px;white-space:pre-wrap;word-break:break-all;color:var(--muted);line-height:1.35;min-height:60px}
+.dosewrap{display:flex;justify-content:center}
+.lvtop{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;position:relative;z-index:1}.lvtop div{display:flex;flex-direction:column}.lvtop b{font-family:var(--f-display);font-weight:500;font-size:26px;line-height:1.1;color:#F5A394}.lvtop span{font-size:11.5px;color:rgba(255,255,255,.6)}
+/* ---- v2 minimal ---- */
+:root{--coral:#E8604F}
+.lnk{border:0;background:none;color:var(--coral);font:inherit;font-size:13.5px;cursor:pointer;font-weight:500}
+.week{display:flex;flex-direction:column;gap:8px;border:0;background:var(--surface);border-radius:20px;padding:12px 14px;font:inherit;color:var(--ink);cursor:pointer;text-align:left;border:1px solid var(--line)}
+.wk-h{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+.wk-d{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wk-d span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:12px}
+.wk-d em{font-style:normal;font-size:11px;color:var(--muted)}.wk-d b{font-weight:500;font-size:15px}
+.wk-d i{display:flex;gap:2px;height:5px}.wk-d u{width:5px;height:5px;border-radius:50%;background:var(--coral);display:block}
+.wk-d .today{background:color-mix(in srgb,var(--coral) 12%,transparent)}.wk-d .today b{color:var(--coral)}
+.sess{background:linear-gradient(150deg,#5A2A22,#2A1512);color:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.sess-h{display:flex;justify-content:space-between;align-items:baseline}.sess-h b{font-family:var(--f-display);font-weight:500;font-size:18px}.sess-h span{font-size:12.5px;color:rgba(255,255,255,.65)}
+.sess-empty{font-size:13.5px;color:rgba(255,255,255,.7)}.sess-empty b{color:#FF9C8C}
+.sess .tline i{opacity:.95}
+.sqq{display:flex;flex-direction:column;gap:4px}
+.sqi{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sqi:last-child{border-bottom:0}
+.sqn{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:11.5px;font-family:var(--f-mono);flex:none}
+.sqt{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sqm{white-space:nowrap;border:1px solid rgba(255,255,255,.2);background:transparent;color:#FFB4A6;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer}
+.sqx{border:0;background:transparent;color:rgba(255,255,255,.5);width:26px;height:26px;border-radius:8px;cursor:pointer;font:inherit}.sqx:disabled{opacity:.2}
+.sess .hbtn{background:#FF8A7A;color:#2a1015}
+.plist2{display:flex;flex-direction:column}
+.pr{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer}.pr:last-child{border-bottom:0}
+.pr-h{flex:none;display:grid}.pr-b{flex:1;min-width:0;display:flex;flex-direction:column}.pr-b b{font-weight:500;font-size:15px}.pr-b span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fv{color:#E0A100;font-size:12px}
+.pr-add{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--coral);font-size:20px;line-height:1;cursor:pointer;flex:none}
+.pr-add.in{background:var(--coral);border-color:var(--coral);color:#fff;font-size:15px}
+.pd-top{display:flex;flex-direction:column;gap:2px}.pd-n{font-family:var(--f-display);font-size:24px;display:flex;align-items:center;gap:6px;justify-content:space-between}
+.tline.big{height:10px}
+.steps2{display:flex;flex-direction:column;gap:2px}
+.st2{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:8px 6px;border-radius:12px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;width:100%}
+.st2>span:nth-child(2){flex:1;font-size:13.5px}.st2 .mono{font-size:12px;color:var(--muted)}.st2.on{background:var(--surface)}.st2.off{opacity:.5}
+.st2 .sdot{width:8px;height:22px;border-radius:3px;flex:none}.st2 .sdot.ok{width:22px;height:22px;border-radius:50%;background:color-mix(in srgb,var(--ok) 18%,var(--surface));color:var(--ok);display:grid;place-items:center;font-size:12px}
+.blk{display:flex;flex-direction:column;gap:6px}
+#p-time button{font-size:12.5px;padding-inline:4px}
+#v-prog .btn.pri{background:var(--coral);color:#fff}
+.done-top{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding-top:6px}
+.done-ic{width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--coral) 16%,var(--surface));color:var(--coral);display:grid;place-items:center;font-size:26px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cw{font-size:11px;color:var(--muted);text-align:center}
+.cd{aspect-ratio:1;border:0;background:transparent;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;color:var(--ink);cursor:pointer}
+.cd b{font-weight:400;font-size:14px}.cd i{width:6px;height:6px;border-radius:50%;background:var(--coral)}
+.cd.has{background:color-mix(in srgb,var(--coral) 8%,transparent)}.cd.today b{color:var(--coral);font-weight:600}.cd.sel{outline:2px solid var(--coral)}
+.cl{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.cl-t{font-size:13px;color:var(--coral)}.cl-b{display:flex;flex-direction:column;min-width:0}.cl-b b{font-weight:500;font-size:14px}.cl-b span{font-size:12px;color:var(--muted)}
+.cal-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--surface);border-radius:16px;padding:12px;margin-top:4px}
+.cal-sum div{display:flex;flex-direction:column;align-items:center}.cal-sum b{font-family:var(--f-display);font-weight:500;font-size:22px}.cal-sum span{font-size:11.5px;color:var(--muted)}
+.iconbtn.sm{width:34px;height:34px;font-size:20px}
+.r-stop{margin-top:4px}
+.btn.pri{background:var(--coral)!important;color:#fff!important}
+/* ---- v3 ---- */
+.protg{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px 4px 5px;font:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+.protg i{width:26px;height:16px;border-radius:999px;background:var(--surface-2);position:relative;transition:background .2s}.protg i::after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .2s}
+.protg[aria-pressed=true]{color:var(--ink)}.protg[aria-pressed=true] i{background:var(--coral)}.protg[aria-pressed=true] i::after{left:12px}
+.pr-i{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;color:var(--cc);background:color-mix(in srgb,var(--cc) 14%,var(--surface))}
+.pr-b .pr-d{white-space:normal;color:var(--ink);font-size:12.5px;margin-top:4px;line-height:1.45}
+.pr-info{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--muted);font:italic 600 12px Georgia,serif;cursor:pointer;flex:none}.pr-info.on{background:var(--ink);color:var(--surface)}
+.recall{display:flex;flex-direction:column;gap:6px}.recall>span{font-size:12px;color:rgba(255,255,255,.55)}
+.recall button{display:flex;justify-content:space-between;gap:8px;text-align:left;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;border-radius:12px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.recall em{font-style:normal;color:#FFB4A6;white-space:nowrap}
+.pd-ic{width:110px;height:110px;border-radius:32px;display:grid;place-items:center;color:var(--cc);background:color-mix(in srgb,var(--cc) 14%,var(--surface));margin:6px 0}
+.cl-r{margin-left:auto;border:1px solid var(--line);background:var(--surface-2);color:var(--coral);border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;cursor:pointer;flex:none}
+.r-big{position:relative;width:200px;height:200px;margin-top:4px}.r-big svg{position:absolute;inset:0}
+.r-bigt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}.r-bigt b{font-family:var(--f-display);font-weight:500;font-size:52px;line-height:1;letter-spacing:-1px}.r-bigt span{font-size:12px;color:rgba(255,255,255,.55);margin-top:4px}
+.r-hz b{font-size:26px!important}
+.runov .r-head svg{width:170px}
+/* ---- v5 ---- */
+.stp{display:inline-flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px}
+.stp button{width:38px;height:38px;border-radius:50%;border:0;background:var(--surface-2);color:var(--ink);font-size:20px;cursor:pointer;touch-action:manipulation}
+.stp b{font-family:var(--f-display);font-weight:500;font-size:22px;min-width:44px;text-align:center}.stp span{font-size:12.5px;color:var(--muted);margin-left:-6px;margin-right:4px}
+.stepw.big .stp b{font-size:30px;min-width:64px}
+#p-time{display:flex;align-items:center;gap:12px;background:none;padding:0}
+.sqs{display:inline-flex;align-items:center;gap:2px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:2px}
+.sqs button{width:24px;height:24px;border-radius:50%;border:0;background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:14px;line-height:1}
+.sqs b{min-width:26px;text-align:center;font-family:var(--f-mono);font-size:12.5px;color:#FFB4A6;font-weight:500}
+.r-big{position:relative;width:270px;height:270px;margin:6px 0 2px}.r-big>svg{position:absolute;inset:0}
+.r-head{position:absolute;inset:0;display:grid;place-items:center;opacity:.9}.runov .r-head svg{width:190px}
+.r-bigt{z-index:1;text-shadow:0 2px 12px rgba(0,0,0,.6)}.r-bigt b{font-size:58px}
+.r-ctl2{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:auto}
+.rbtn{height:54px;border-radius:18px;border:0;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:16px;font-weight:500;cursor:pointer}
+.rbtn.stop{background:rgba(232,115,94,.2);color:#FFB4A6}
+.fab{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;z-index:15;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 20px 12px 14px;background:var(--coral);color:#fff;font:inherit;font-size:15px;font-weight:500;box-shadow:0 10px 26px -8px rgba(232,96,79,.65);cursor:pointer}
+.fab span{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:20px;line-height:1}
+@media (max-width:560px){.fab{position:fixed}}
+.bchip.on{background:var(--bc)!important;color:#fff!important;border-color:var(--bc)!important}
+.hglow{display:block;max-width:100%;height:auto}
+.r-head{position:absolute!important;inset:auto!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%);width:190px;height:173px;display:block!important}
+.stepw{display:flex;justify-content:center}
+#p-add{white-space:nowrap;font-size:14px}
+/* ---- v6: closed-loop, levels, builder ---- */
+.opts{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px}
+.optr{display:flex;align-items:center;justify-content:space-between;gap:10px}.optr .lbl{margin:0}
+.opts .stp button{width:32px;height:32px;font-size:17px}.opts .stp b{font-size:18px;min-width:30px}
+.protg span{pointer-events:none}
+.protg.dk{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.7)}.protg.dk[aria-pressed=true]{color:#fff}
+.sess-o{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.6)}
+.sess-o .stp{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);padding:2px;gap:4px}.sess-o .stp button{width:26px;height:26px;font-size:15px;background:rgba(255,255,255,.1);color:#fff}.sess-o .stp b{font-size:14px;min-width:16px;color:#fff}.sess-o .stp span{font-size:10.5px;color:rgba(255,255,255,.55)}
+.swrow{display:flex;align-items:flex-end;justify-content:center;gap:8px}.swrow>div{display:flex;flex-direction:column;align-items:center;gap:2px}.swarr{padding-bottom:12px;color:var(--muted)}
+.swrow .stp button{width:30px;height:30px;font-size:16px}.swrow .stp b{font-size:17px;min-width:34px}
+.r-head2{margin-top:2px}.r-head2 svg{width:150px;height:auto}
+.r-big{width:210px!important;height:210px!important}.r-bigt b{font-size:50px!important}
+.r-eeg{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.re-h{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.6)}.re-h b{color:#fff;font-weight:500;font-size:13px}
+.re-dot{width:8px;height:8px;border-radius:50%;background:#F2B63A}.re-dot.live{background:#F5A394;animation:pulse 1.6s infinite}
+.re-c{display:flex;gap:6px}.re-c span{flex:1;display:flex;flex-direction:column;align-items:center;font-family:var(--f-mono);font-size:13px;background:rgba(255,255,255,.05);border-radius:10px;padding:4px 0}.re-c em{font-style:normal;font-family:var(--f-body);font-size:10.5px;color:rgba(255,255,255,.5)}
+.re-c .up{color:#F5A394}.re-c .dn{color:#F2B63A}.re-c .bad{color:#FF8A7A}
+.re-sp{width:100%;height:36px}.re-ev{font-size:11.5px;color:#FFB4A6}
+.re-wait{height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}.re-wait i{display:block;height:100%;background:#F5A394}
+.clsum{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.cs-r{display:grid;grid-template-columns:62px 1fr 48px;align-items:center;gap:8px;font-size:12.5px}
+.cs-bar{position:relative;height:8px;background:var(--surface-2);border-radius:4px}.cs-bar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)}
+.cs-bar i{position:absolute;top:0;bottom:0;border-radius:4px}.cs-bar i.p{background:var(--ok)}.cs-bar i.n{background:var(--warn)}
+.cs-r b{font-family:var(--f-mono);font-weight:500;text-align:right}.cs-r b.g{color:var(--ok)}
+.cs-ev{margin:0;padding-left:18px;font-size:12px;color:var(--muted)}
+.clflow{display:flex;flex-direction:column;gap:8px}.clflow>div{display:flex;gap:10px;align-items:flex-start}.clflow b{display:block;font-weight:500;font-size:13.5px}
+.bname{border:0;background:transparent;font-family:var(--f-display);font-size:24px;color:var(--ink);padding:4px 0;border-bottom:1.5px dashed var(--line);width:100%}
+.bname:focus{outline:none;border-bottom-color:var(--coral)}
+.bcard{display:flex;align-items:center;gap:10px;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:10px 12px;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.bcard .sdot{width:6px;height:28px;border-radius:3px}.chev{color:var(--muted);font-size:20px}
+.ecard{border:1.5px solid var(--coral);background:var(--surface);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 24px -16px rgba(232,96,79,.6)}
+.ec-h{display:flex;align-items:center;gap:8px}.ec-h b{flex:1;font-weight:500;font-size:14px}.ec-a{display:flex;gap:2px}.ec-a button{border:0;background:var(--surface-2);color:var(--muted);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;cursor:pointer}.ec-a button:disabled{opacity:.3}
+.ec-s{display:flex;flex-direction:column;gap:8px}
+.ec-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ec-row>div{display:flex;flex-direction:column;gap:6px}.ec-row .stp button{width:30px;height:30px;font-size:16px}.ec-row .stp b{font-size:17px;min-width:28px}
+.ec-more summary{cursor:pointer;font-size:13px;color:var(--coral);list-style:none}.ec-more summary::-webkit-details-marker{display:none}.ec-more[open]{display:flex;flex-direction:column;gap:8px}
+.ckl{display:flex;gap:8px;align-items:center;font-size:13px}
+.addstep{border:1.5px dashed var(--line);background:transparent;border-radius:16px;padding:12px;font:inherit;color:var(--coral);font-weight:500;cursor:pointer}
+.bsteps{display:flex;flex-direction:column;gap:8px}
+/* ---- v7 ---- */
+.lvfix{font-size:13px;color:var(--ok);font-weight:500}.lvw{font-size:11px;color:var(--warn);margin-left:6px}
+.sess-o .lvfix{color:#9FE8B8;font-size:12px}
+.re-c.dim span{opacity:.45}
+.fr{display:grid;grid-template-columns:70px 1fr 48px;gap:8px;align-items:center;font-size:12.5px;padding:3px 0}.fr b{font-family:var(--f-mono);font-weight:500;text-align:right}
+.fr-b{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}.fr-b i{display:block;height:100%;background:var(--ok);border-radius:5px}
+.fr.best{background:color-mix(in srgb,var(--ok) 10%,transparent);border-radius:8px;padding:3px 6px;margin:0 -6px}.fr.best b{color:var(--ok)}
+.finder{display:flex;align-items:center;gap:12px;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:10px 12px;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.fd-i{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,#F5A394 22%,var(--surface));color:#B23E2C;flex:none}
+.fd-b{flex:1;min-width:0;display:flex;flex-direction:column}.fd-b>b{font-weight:500;font-size:14.5px}.fd-b>span{font-size:12px;color:var(--muted)}.fd-b>span b{color:var(--ink);font-weight:600}
+.tline i.on,.r-tl i.on{outline:none!important;opacity:1!important;transform:scaleY(1.6)}.tline i,.r-tl i{opacity:.45;transition:transform .2s}
+.tline:not(:has(.on)) i{opacity:.9}
+/* ---- v9 quick start ---- */
+#v-quick{gap:12px}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.qhead{background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--coral) 10%,var(--surface)),var(--surface) 70%);padding-bottom:10px}
+.qh-top{display:flex;justify-content:space-between;align-items:center}.qh-n{font-size:13px;color:var(--muted)}.qh-n b{font-family:var(--f-display);font-size:20px;font-weight:500;color:var(--ink);margin-right:2px}
+.qh-q{display:flex;background:var(--surface-2);border-radius:999px;padding:3px}.qh-q button{border:0;background:transparent;color:var(--ink);font:inherit;font-size:12.5px;padding:5px 14px;border-radius:999px;cursor:pointer}.qh-q button:hover{background:var(--surface)}
+.qh-map{display:flex;justify-content:center}.qh-map svg{max-width:100%;height:auto}.qh-hint{text-align:center;font-size:11.5px;color:var(--muted)}
+.qtabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:14px;padding:3px}.qtabs button{border:0;background:transparent;font:inherit;font-size:13.5px;padding:8px;border-radius:11px;color:var(--muted);cursor:pointer}.qtabs button.on{background:var(--surface);color:var(--ink);font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.qf{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 2px}
+.qf-v{display:flex;flex-direction:column;align-items:center}.qf-v b{font-family:var(--f-display);font-weight:500;font-size:58px;line-height:1;letter-spacing:-1.5px}.qf-v span{font-size:12.5px;color:var(--muted);margin-top:4px}
+.qf-b{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-size:22px;cursor:pointer}
+.qslide{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#9AA5A1 0%,#9AA5A1 30%,#7A5BC9 30%,#7A5BC9 45%,#2A8C82 45%,#2A8C82 54%,#4FA36B 54%,#4FA36B 59%,#D89A1E 59%,#D89A1E 74%,#C2563A 74%);outline:none;margin:4px 0 0}
+.qslide::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--coral);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.qslide::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--coral)}
+.qscale{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:var(--f-mono);position:relative;height:12px}
+.qscale span{position:absolute;transform:translateX(-50%)}.qscale span:nth-child(1){left:0;transform:none}.qscale span:nth-child(2){left:30%}.qscale span:nth-child(3){left:45%}.qscale span:nth-child(4){left:56%}.qscale span:nth-child(5){left:74%}.qscale span:nth-child(6){right:0;left:auto;transform:none}
+.qbands{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.qbands button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:8px 9px;font:inherit;font-size:12.5px;color:var(--ink);cursor:pointer;text-align:left}
+.qbands i{width:8px;height:8px;border-radius:50%;background:var(--bc);flex:none}.qbands em{font-style:normal;margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.qbands button.on{border-color:var(--bc);background:color-mix(in srgb,var(--bc) 18%,var(--surface))}.qbands button.on em{color:var(--ink)}
+.qsw{display:flex;align-items:flex-end;justify-content:center;gap:6px;color:var(--muted)}.qsw>div{display:flex;flex-direction:column;align-items:center;gap:4px}.qsw>div>span{font-size:11.5px}.qsw svg{margin-bottom:16px}
+.qsw .stp button{width:32px;height:32px;font-size:17px}.qsw .stp b{font-size:20px;min-width:36px}
+.qsw-bar{position:relative;height:8px;border-radius:4px;background:var(--surface-2)}.qsw-bar i{position:absolute;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,var(--coral),#FFB4A6)}
+.qlist{padding:4px 14px;gap:0}.qrow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}.qrow:last-child{border-bottom:0}
+.qrow .stp button{width:32px;height:32px;font-size:17px}.qrow .stp b{font-size:18px;min-width:30px}
+.qbar{position:absolute;left:0;right:0;bottom:0;z-index:12;display:flex;gap:8px;padding:12px 16px 20px;background:linear-gradient(transparent,var(--app-bg) 30%)}
+@media (max-width:560px){.qbar{position:fixed}}
+.qsave{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:18px;padding:0 20px;font:inherit;font-weight:500;cursor:pointer}
+.qgo{flex:1;height:56px;border-radius:18px;font-size:16px}.qgo:disabled{opacity:.5}
+.qbands.qsw2{grid-template-columns:repeat(2,1fr)}.qbands em{white-space:nowrap}
+/* v10 fixes */
+#v-quick>*{flex:none}#q-freq{display:flex;flex-direction:column;gap:12px;min-width:0}
+.qsw{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}.qsw svg{display:none}
+.qsw>div{align-items:stretch;min-width:0}.qsw>div>span{text-align:center}
+.qsw .stp{display:flex;justify-content:space-between;width:100%;box-sizing:border-box;gap:2px;padding:3px}
+.qsw .stp button{width:30px;height:30px;font-size:16px;flex:none}.qsw .stp b{font-size:19px;min-width:0;flex:1}.qsw .stp span{margin:0 2px 0 -2px;font-size:11px}
+.qsw-bar{margin:2px 4px}
+.qnote{text-align:center;font-size:11.5px;color:var(--muted);line-height:1.4}
+.qcard>*,#q-freq>*{flex-shrink:0}
+
+/* v11 band guide */
+.bguide{border-top:1px solid var(--line);margin-top:2px;padding-top:2px}
+.bguide summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:13px;color:var(--muted)}
+.bguide summary::-webkit-details-marker{display:none}
+.bguide summary>span:first-child{flex:none}
+.bguide .bg-mini{flex:1;display:flex;height:6px;border-radius:3px;overflow:hidden}.bguide .bg-mini i{flex:1}
+.bguide summary svg{transition:transform .2s}.bguide[open] summary svg{transform:rotate(180deg)}
+.bg-list{display:flex;flex-direction:column;gap:4px;padding:4px 0 6px}
+.bg-row{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:12px}
+.bg-row>i{width:4px;align-self:stretch;border-radius:2px;background:var(--gc);flex:none}
+.bg-row b{font-weight:500;font-size:13.5px;color:color-mix(in srgb,var(--gc) 78%,var(--ink));margin-right:6px}
+.bg-row span{font-size:11px;color:var(--muted)}
+.bg-row p{margin:2px 0 0;font-size:12px;color:var(--muted);line-height:1.4}
+.bg-row.on{background:color-mix(in srgb,var(--gc) 13%,transparent)}.bg-row.on p{color:var(--ink)}
+.bg-note{font-size:10.5px;color:var(--muted);margin:0 2px 4px}
+@media (prefers-reduced-motion:reduce){.bguide summary svg{transition:none}}
+
+.rguide{margin-top:6px}
+.bg-row.rg{border:0;width:100%;text-align:left;font:inherit;color:var(--ink);background:transparent;cursor:pointer}
+.bg-row.rg>div{flex:1;min-width:0}
+.bg-row.rg em{font-style:normal;font-size:11px;color:var(--muted);align-self:center}
+.bg-row.rg.part{background:color-mix(in srgb,var(--gc) 6%,transparent)}
+.bg-row.rg:focus-visible{outline:2px solid var(--gc)}
+
+/* v12 settings + pro rows */
+.protag{font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.06em;color:var(--coral);border:1px solid currentColor;border-radius:5px;padding:0 4px;margin-left:6px;vertical-align:1px}
+.qrow .seg.mini{min-width:180px}
+.prolist{display:flex;flex-wrap:wrap;gap:6px}
+.prolist span{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 9px;border-radius:10px;background:var(--surface-2);color:var(--muted)}
+.prolist span.on{color:var(--ink);box-shadow:inset 0 0 0 1px var(--coral)}.prolist span.on svg{color:var(--coral)}
+.prolist .note{background:none;padding:2px 0;width:100%}
+.devx summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.qrow .seg.mini{display:flex;flex-wrap:nowrap;min-width:0}.qrow .seg.mini button{padding:6px 10px;white-space:nowrap;flex:none}
+#q-pat-row{flex-wrap:wrap}#q-pat-row .patn{width:100%;font-size:11.5px;color:var(--muted);text-align:right;margin-top:-2px}
+
+.ec-duty{display:flex;align-items:center;justify-content:space-between;gap:8px}
+
+/* v13 Today's Session: light surface card, same language as BrainSTEM cards */
+.sess{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);gap:12px}
+.sess.has{background:linear-gradient(160deg,color-mix(in srgb,var(--coral) 11%,var(--surface)),var(--surface) 65%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--coral) 28%,var(--line))}
+.sess .sess-h b{font-size:17px}.sess .sess-h span{color:var(--muted);font-size:12px}
+.sess .sess-empty{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}
+.sess .sess-empty i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:18px;color:var(--coral);background:color-mix(in srgb,var(--coral) 12%,var(--surface));flex:none}
+.sess .sess-empty b{color:var(--coral)}
+.sess .sqi{border-bottom-color:var(--line)}
+.sess .sqn{background:var(--surface-2);color:var(--muted)}
+.sess .sqs{border-color:var(--line)}.sess .sqs button{background:var(--surface-2);color:var(--ink)}.sess .sqs b{color:var(--coral)}
+.sess .sqx{color:var(--muted)}
+.sess .sess-o{color:var(--muted)}
+.sess .sess-o .stp{background:var(--surface-2);border-color:var(--line)}.sess .sess-o .stp button{background:var(--surface);color:var(--ink)}.sess .sess-o .stp b{color:var(--ink)}.sess .sess-o .stp span{color:var(--muted)}
+.sess .sess-o .lvfix{color:var(--ok)}
+.sess .hbtn{background:var(--coral);color:#fff}
+.sess .recall{flex-direction:row;flex-wrap:nowrap;align-items:center;overflow-x:auto;gap:6px;scrollbar-width:none;margin:0 -2px;padding:0 2px}
+.sess .recall::-webkit-scrollbar{display:none}
+.sess .recall>span{color:var(--muted);flex:none;font-size:12px}
+.sess .recall button{flex:none;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:12.5px;gap:6px}
+.sess .recall em{color:var(--coral)}
+
+/* v14 Frequency Finder: secondary tool row under the program list */
+.finder{background:transparent!important;border:1px dashed var(--line)!important;box-shadow:none!important;padding:10px 12px!important;border-radius:16px!important;gap:10px!important;margin-top:4px}
+.finder .fd-i{width:30px;height:30px;border-radius:10px;background:color-mix(in srgb,var(--coral) 12%,var(--surface));color:var(--coral)}
+.finder .fd-b>b{font-size:13.5px}.finder .fd-b>span{font-size:11.5px}
+
+/* v15 run screen: fewer words */
+.r-step b{display:inline-flex;align-items:center;gap:6px}
+.fc-row{display:flex;gap:6px}
+.fc{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0;border-radius:12px;background:rgba(255,255,255,.05);font-family:var(--f-mono)}
+.fc b{font-size:14px;color:#fff;font-weight:500}.fc em{font-style:normal;font-size:11px;color:rgba(255,255,255,.55)}
+.fc.cur{box-shadow:inset 0 0 0 1.5px #FF8A7A}.fc.cur em{color:#FF8A7A}
+.fc.best{background:rgba(255,138,122,.18)}.fc.best em{color:#FFB4A6}
+.fc.wide em{font-family:var(--f-body)}
+
+.finder{cursor:default}.bs-embed .finder{cursor:pointer}
+
+/* v16 week: one quiet row, same squares as Monitor's activity grid */
+.week{flex-direction:row!important;align-items:center;gap:12px!important;padding:10px 12px 10px 14px!important;border-radius:18px!important}
+.week .wk-t{display:flex;flex-direction:column;gap:1px;flex:none}.week .wk-t b{font-weight:500;font-size:13.5px}
+.week .wk-g{flex:1;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;min-width:0}
+.week .wk-g span{display:flex;flex-direction:column;align-items:center;gap:3px}
+.week .wk-g i{width:100%;max-width:22px;aspect-ratio:1;border-radius:5px;background:var(--surface-2);position:relative;overflow:hidden}
+.week .wk-g i::after{content:"";position:absolute;inset:0;background:var(--coral);opacity:var(--o)}
+.week .wk-g em{font-style:normal;font-size:9.5px;color:var(--muted);line-height:1}
+.week .wk-g .today i{box-shadow:inset 0 0 0 1.5px var(--coral)}.week .wk-g .today em{color:var(--coral);font-weight:600}
+.week .chev{color:var(--muted);font-size:18px}
+
+/* v17 session summary */
+#v-sum .clsum{background:transparent;border:0;padding:0;gap:12px}
+.sm-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sm-tiles span{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.sm-tiles b{font-family:var(--f-display);font-weight:500;font-size:20px;font-variant-numeric:tabular-nums}.sm-tiles em{font-style:normal;font-size:11px;color:var(--muted)}
+.sm-eeg{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.sm-big{display:flex;align-items:baseline;gap:10px}.sm-big b{font-family:var(--f-display);font-weight:500;font-size:34px;line-height:1}
+.sm-big .tag{font-size:11.5px;color:var(--muted);background:var(--surface-2);border-radius:999px;padding:2px 9px}.sm-big .tag.on{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.sm-ch{width:100%;height:auto;display:block}.sm-ax{font-size:10px;fill:var(--muted);font-family:var(--f-body)}
+.sm-chips{display:flex;gap:6px;flex-wrap:wrap}.sm-chips span{display:inline-flex;gap:5px;align-items:baseline;font-family:var(--f-mono);font-size:12.5px;background:var(--surface-2);border-radius:10px;padding:4px 9px}
+.sm-chips em{font-style:normal;font-family:var(--f-body);font-size:11px;color:var(--muted)}.sm-chips .w{color:var(--warn)}
+#s-dose{margin-top:4px}#s-dnote{margin-top:-6px}
+.pabout{background:var(--surface);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.pa-h{display:flex;align-items:center;justify-content:space-between}.pa-h b{font-family:var(--f-display);font-weight:500;font-size:15px}
+.evc{font-style:normal;font-size:11px;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.evc.ev-pilot{color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent)}.evc.ev-guide{color:var(--warn,#B07A12);background:color-mix(in srgb,var(--warn,#B07A12) 15%,transparent)}
+.pr-d .evc{display:inline-block;margin-left:6px}
+.pa-w{margin:0;font-size:13px;line-height:1.6;color:var(--ink)}
+.pa-r{display:flex;flex-direction:column;gap:6px;background:var(--surface-2);border-radius:14px;padding:10px 12px}
+.pa-r span{display:grid;grid-template-columns:18px 58px 1fr;gap:6px;align-items:start;font-size:12px}.pa-r svg{color:var(--coral,var(--th));margin-top:1px}.pa-r em{font-style:normal;color:var(--muted)}.pa-r b{font-weight:500;color:var(--ink)}
+.pa-e{margin:0;font-size:11.5px;color:var(--muted);line-height:1.5}
+.pa-ref summary{cursor:pointer;font-size:12.5px;color:var(--th);list-style:none}.pa-ref summary::-webkit-details-marker{display:none}.pa-ref summary::before{content:"▸ "}.pa-ref[open] summary::before{content:"▾ "}
+.pa-ref ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:11px;line-height:1.45;color:var(--muted)}
+.pa-d{margin:0;font-size:11px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+/* run screen follows light theme */
+:root[data-theme="light"] .runov{background:radial-gradient(circle at 50% 30%,#FFEDE8,#F6F8F7 72%);color:var(--ink)}
+:root[data-theme="light"] .runov .r-left,:root[data-theme="light"] .runov .r-hz span,:root[data-theme="light"] .runov .r-hz em,:root[data-theme="light"] .runov .r-step span,:root[data-theme="light"] .runov .r-bigt span{color:var(--muted)}
+:root[data-theme="light"] .runov .r-hz b{color:#D9533F}
+:root[data-theme="light"] .runov .r-bigt{text-shadow:none}
+:root[data-theme="light"] .runov .r-big svg circle[stroke="rgba(255,255,255,.08)"]{stroke:rgba(0,0,0,.08)}
+:root[data-theme="light"] .runov #r-ring{stroke:#E8604F}
+:root[data-theme="light"] .runov .rbtn{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+:root[data-theme="light"] .runov .rbtn.stop{background:color-mix(in srgb,#D9533F 12%,var(--surface));color:#B23E2C}
+:root[data-theme="light"] .runov .r-eeg{background:var(--surface);border-color:var(--line);color:var(--ink)}
+:root[data-theme="light"] .runov .headpbm.dark .hh-e,:root[data-theme="light"] .runov .headpbm.dark .hh-c{fill:var(--surface-2);stroke:var(--line)}
+:root[data-theme="light"] .runov .headpbm.dark .hh-l{stroke:var(--line)}
+:root[data-theme="light"] .runov .headpbm.dark .hp{fill:var(--surface);stroke:var(--line)}
+:root[data-theme="light"] .runov .headpbm.dark .hp-t{fill:var(--muted)}
+:root[data-theme="light"] .runov .r-tl i.on{outline-color:var(--ink)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .runov{background:radial-gradient(circle at 50% 30%,#FFEDE8,#F6F8F7 72%);color:var(--ink)}:root:not([data-theme="dark"]) .runov .r-left,:root:not([data-theme="dark"]) .runov .r-hz span,:root:not([data-theme="dark"]) .runov .r-hz em,:root:not([data-theme="dark"]) .runov .r-step span,:root:not([data-theme="dark"]) .runov .r-bigt span{color:var(--muted)}:root:not([data-theme="dark"]) .runov .r-hz b{color:#D9533F}:root:not([data-theme="dark"]) .runov .r-bigt{text-shadow:none}:root:not([data-theme="dark"]) .runov .r-big svg circle[stroke="rgba(255,255,255,.08)"]{stroke:rgba(0,0,0,.08)}:root:not([data-theme="dark"]) .runov #r-ring{stroke:#E8604F}:root:not([data-theme="dark"]) .runov .rbtn{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}:root:not([data-theme="dark"]) .runov .rbtn.stop{background:color-mix(in srgb,#D9533F 12%,var(--surface));color:#B23E2C}:root:not([data-theme="dark"]) .runov .r-eeg{background:var(--surface);border-color:var(--line);color:var(--ink)}:root:not([data-theme="dark"]) .runov .headpbm.dark .hh-e,:root:not([data-theme="dark"]) .runov .headpbm.dark .hh-c{fill:var(--surface-2);stroke:var(--line)}:root:not([data-theme="dark"]) .runov .headpbm.dark .hh-l{stroke:var(--line)}:root:not([data-theme="dark"]) .runov .headpbm.dark .hp{fill:var(--surface);stroke:var(--line)}:root:not([data-theme="dark"]) .runov .headpbm.dark .hp-t{fill:var(--muted)}:root:not([data-theme="dark"]) .runov .r-tl i.on{outline-color:var(--ink)}}
+
+/* bigger head inside the time ring + soft pulse + frequency wave */
+.r-big2{position:relative;width:min(84vw,330px);aspect-ratio:1;margin:6px 0 0}
+.r-ringsvg{position:absolute;inset:0;width:100%;height:100%}
+.r-head3{position:absolute;inset:7%;display:grid;place-items:center}.r-head3 svg{width:100%!important;height:auto}
+.r-bigt2{display:flex;flex-direction:column;align-items:center;margin-top:2px}.r-bigt2 b{font-family:var(--f-display);font-weight:500;font-size:46px;line-height:1;letter-spacing:-1px}.r-bigt2 span{font-size:12px;color:rgba(255,255,255,.55);margin-top:2px}
+.r-wave{width:min(70vw,260px);height:26px;color:#FF8A7A;opacity:.85;overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 15%,#000 85%,transparent);mask:linear-gradient(90deg,transparent,#000 15%,#000 85%,transparent)}
+.r-wave svg{width:200%;height:100%;display:block}.r-wave .wv{animation:wv 6s linear infinite}@keyframes wv{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.r-wave .wv{animation:none}}
+.runov{gap:8px}
+:root[data-theme="light"] .runov .r-bigt2 span{color:var(--muted)}:root[data-theme="light"] .runov .r-wave{color:#E8604F}:root[data-theme="light"] .runov .r-ringsvg circle[stroke="rgba(255,255,255,.08)"]{stroke:rgba(0,0,0,.08)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .runov .r-bigt2 span{color:var(--muted)}:root:not([data-theme="dark"]) .runov .r-wave{color:#E8604F}:root:not([data-theme="dark"]) .runov .r-ringsvg circle[stroke="rgba(255,255,255,.08)"]{stroke:rgba(0,0,0,.08)}}
+
+.r-ringsvg{display:none}.r-head3{inset:0}.r-big2{width:min(92vw,360px)}
+
+.r-big2{width:min(70vw,270px)!important;margin:4px 0 0}.r-head3 .hglow{width:100%!important;height:auto}.runov{justify-content:flex-start}
+.iab{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding:0 6px;height:16px;border-radius:8px;font:600 10.5px/1 ui-monospace,monospace;font-style:normal;color:#5FB8A8;background:rgba(95,184,168,.14);vertical-align:1px}
+i.iab{margin:0 2px;padding:0 5px}
+.ia-note{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;opacity:.85}
+.ia-note .iab{margin:0}
+.hsc{display:flex;flex-direction:column;gap:10px;width:100%}
+.hs-top{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}.hs-top b{font-family:var(--f-display);font-weight:500;font-size:20px}.hs-top span{font-size:12px;color:var(--muted)}
+.hs-head{width:100%;max-width:250px;align-self:center;display:block}
+.hs-pl{animation:hsP 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes hsP{50%{opacity:.05;transform:scale(1.25)}}
+.hs-tiles{display:grid;gap:6px;width:100%}
+.hs-tiles span{background:var(--surface-2);border-radius:14px;padding:9px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.hs-tiles b{font-family:var(--f-display);font-weight:500;font-size:14px}.hs-tiles i{font-style:normal;font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.hs-tiles .l0{box-shadow:inset 0 0 0 1.5px var(--ok)}.hs-tiles .l0 b{color:var(--ok)}
+.hs-tiles .l1{box-shadow:inset 0 0 0 1.5px var(--warn)}.hs-tiles .l1 b{color:var(--warn)}
+.hs-tiles .l2{box-shadow:inset 0 0 0 1.5px var(--danger)}.hs-tiles .l2 b{color:var(--danger)}
+.hs-m{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.hs-m .mono{font-family:var(--f-mono);min-width:52px;text-align:right}
+.hs-m .bar{flex:1;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}.hs-m .bar u{display:block;height:100%;text-decoration:none;transition:width .3s}
+.hs-st{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-radius:14px;padding:9px 12px;font-size:12.5px;line-height:1.45;min-height:44px}
+.hs-st>b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:13px}
+.hs-st.ok>b{background:color-mix(in srgb,var(--ok) 20%,var(--surface));color:var(--ok)}.hs-st.wait>b{background:color-mix(in srgb,var(--warn) 20%,var(--surface));color:var(--warn)}
+.hs-st span{flex:1}.hs-fx{border:0;font:inherit;font-size:12px;background:var(--surface);color:var(--ink);border-radius:10px;padding:6px 10px;cursor:pointer;flex:none}
+.hs-leg{display:flex;gap:12px;justify-content:center;font-size:10.5px;color:var(--muted)}.hs-leg span{display:flex;align-items:center;gap:5px}.hs-leg i{width:8px;height:8px;border-radius:50%}
+.hsc .hs-st{text-align:left}
+.rstage .hsc{gap:8px}
+.rstage:has(.hsc){justify-content:flex-start;overflow-y:auto}.rstage .hs-head{max-width:215px}
+#v-run:has(.hsc) .reeg{display:none}
+
+.hsov{position:absolute;inset:0;z-index:45;background:var(--app-bg);color:var(--ink);display:flex;flex-direction:column;gap:12px;padding:52px 18px 24px;overflow-y:auto}
+@media (max-width:560px){.hsov{position:fixed}}
+.hsov-t{display:flex;align-items:center;justify-content:space-between}
+.hsov #hk-go:disabled{opacity:.5}
+
+.runov.eegm .r-big2,.runov.eegm .r-wave,.runov.eegm .r-bigt2{display:none!important}
+.runov.eegm .r-eeg{padding:12px;gap:10px}
+.esc{display:flex;flex-direction:column;gap:6px}.esc canvas{width:100%;height:auto;display:block;border-radius:10px;background:rgba(0,0,0,.18)}
+.re-bands{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rb{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px}
+.rb b{font-family:ui-monospace,monospace;font-size:14px}
+.rb i{width:22px;height:54px;border-radius:7px;background:rgba(255,255,255,.08);display:flex;align-items:flex-end;overflow:hidden}
+.rb u{display:block;width:100%;border-radius:7px;transition:height .4s}
+.rb-t u{background:#8FA6E8}.rb-a u{background:#6CCFB9}.rb-b u{background:#F2C14E}.rb-hb u{background:#F28B74}
+.rb em{font-style:normal;font-family:ui-monospace,monospace;font-size:12px}.rb small{opacity:.6;font-size:10px}
+:root[data-theme="light"] .esc canvas{background:rgba(0,0,0,.03)}:root[data-theme="light"] .rb i{background:rgba(0,0,0,.06)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .esc canvas{background:rgba(0,0,0,.03)}:root:not([data-theme="dark"]) .rb i{background:rgba(0,0,0,.06)}}
+
+:root[data-theme="light"] .runov .re-h b{color:var(--ink)}:root[data-theme="light"] .runov .re-h{color:var(--muted)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .runov .re-h b{color:var(--ink)}:root:not([data-theme="dark"]) .runov .re-h{color:var(--muted)}}
+
+/* minimal closed-loop EEG view */
+.runov.eegm .r-eeg{background:none!important;border:0!important;padding:0 2px!important;gap:14px!important;margin-top:6px}
+.esc{gap:8px}.esc canvas{background:none!important;border-radius:0;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 78%,transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 78%,transparent 100%)}
+.esc-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:.6}.esc-h span:first-child{letter-spacing:.06em;text-transform:uppercase}
+.esc-h span{display:flex;align-items:center;gap:6px}.esc-h .re-dot{display:inline-block}
+.re-bands2{display:flex;justify-content:space-between;gap:6px;font:500 13px ui-monospace,monospace}
+.rb2{display:flex;align-items:center;gap:5px;opacity:.75}.rb2 i{width:7px;height:7px;border-radius:50%;background:currentColor}.rb2 b{font-weight:600;margin-left:2px}
+.rb2.rb-t i{background:#8FA6E8}.rb2.rb-a i{background:#6CCFB9}.rb2.rb-b i{background:#F2C14E}.rb2.rb-hb i{background:#F28B74}.rb2.rb-a{opacity:1}
+.re-line{height:2px;border-radius:1px;background:rgba(255,255,255,.1);overflow:hidden}.re-line i{display:block;height:100%;background:currentColor;opacity:.6}
+:root[data-theme="light"] .re-line{background:rgba(0,0,0,.08)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .re-line{background:rgba(0,0,0,.08)}}
+
+/* compact 7-day strip, same height as the battery chip, sharing its row */
+.week.wk-s{flex:1;min-width:0;margin-left:8px;flex-direction:row!important;align-items:center;gap:8px!important;padding:4px 8px 4px 12px!important;border-radius:999px!important;height:31px;box-sizing:border-box}
+.week.wk-s .wk-t{flex-direction:row;align-items:baseline;gap:6px}.week.wk-s .wk-t .lbl{font-size:11px}.week.wk-s .wk-t b{font-size:12.5px;white-space:nowrap}
+.week.wk-s .wk-g{gap:3px;justify-content:end}.week.wk-s .wk-g span{gap:0}.week.wk-s .wk-g i{max-width:11px;border-radius:3px}
+.week.wk-s .wk-n{font-size:11px;color:var(--muted)}.week.wk-s .chev{font-size:15px;line-height:1}
+
+/* clinic time limit notice (startRun after the clinic's PBM hour) */
+.pg-late{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px}
+.pg-late[hidden]{display:none}
+.pg-late>div{background:var(--surface,#fff);color:var(--ink,#111);border-radius:18px;padding:20px;max-width:320px;display:flex;flex-direction:column;gap:10px;text-align:center}
+.pg-late span{font-size:14px;color:var(--muted,#666);line-height:1.5}
+.fab[hidden]{display:none}
+</style>
+<div class="stage">
+<div class="phone">
+ <div class="island" aria-hidden="true"></div>
+ <div class="screen" id="screen">
+  <div class="status" aria-hidden="true"><span id="clock">9:41</span><span class="ic"><span class="mono" style="font-size:11px">5G</span><span class="batt"></span></span></div>
+  <div class="appbar">
+    <button class="iconbtn" id="back" aria-label="ย้อนกลับ" hidden><svg viewBox="0 0 24 24" fill="none" style="stroke:var(--ink)" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <h1 id="apptitle">PBM</h1>
+    <button class="iconbtn" id="gear" aria-label="ตั้งค่า"><svg viewBox="0 0 24 24" fill="none" style="stroke:var(--ink)" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></button>
+  </div>
+  <div class="views" id="views">
+
+  <!-- HOME -->
+  <section class="view" id="v-home">
+    <div class="row between">
+      <button class="who" id="who" aria-label="เปลี่ยนผู้ใช้"><span class="av" id="who-av">?</span><span id="who-name"></span><span aria-hidden="true">▾</span></button>
+      <span class="hs" id="hs"></span>
+    </div>
+    <button class="week" id="week" aria-label="ดูประวัติรายวัน"></button>
+    <div class="sess" id="sess"></div>
+    <div class="row between"><h3 style="margin:0">Programs</h3><span class="row" style="gap:10px"><button class="lnk" id="h-new" hidden>+ New</button><button class="protg" id="h-pro" aria-pressed="false"><i></i>Pro</button></span></div>
+    <div class="chipsx" id="h-cats"></div>
+    <div class="plist2" id="h-list"></div>
+    <button class="finder" id="finder"></button>
+    <div style="height:64px"></div>
+    <button class="fab" id="fab" aria-label="ตั้งค่าเองแล้วเริ่ม"><span>+</span>Quick Start</button>
+  </section>
+
+  <!-- PROGRAM DETAIL -->
+  <section class="view" id="v-prog" hidden>
+    <div class="pd-top"><div class="pd-n" id="p-name"></div><div class="note" id="p-goal"></div></div>
+    <div class="ph-map" id="p-map"></div>
+    <div class="ph-cap" id="p-cap"></div>
+    <div class="tline big" id="p-tline"></div>
+    <div class="steps2" id="p-steps"></div>
+    <div class="opts">
+      <div class="optr"><span class="lbl">Duration</span><div id="p-time"></div></div>
+      <div class="optr"><span class="lbl">Intensity</span><div id="p-lvl"></div></div>
+      <div class="optr"><span class="lbl">EEG Closed-loop</span><button class="protg" id="p-cl" aria-pressed="false"><i></i><span>Off</span></button></div>
+      <div class="note" id="p-time-n"></div>
+    </div>
+    <div class="note" id="p-note"></div>
+    <div class="pabout" id="p-about"></div>
+    <div class="row" style="gap:8px" id="p-actions"></div>
+    <div class="row" style="gap:8px"><button class="btn" id="p-add" style="flex:1">+ Session</button><button class="btn pri" id="p-go" style="flex:1.3">Start</button></div>
+  </section>
+
+  <!-- QUICK START -->
+  <section class="view" id="v-quick" hidden>
+    <div class="qcard qhead">
+      <div class="qh-top"><span class="qh-n" id="q-cnt"></span><div class="qh-q"><button id="q-all">All</button><button id="q-none">Clear</button></div></div>
+      <div class="qh-map" id="q-map"></div>
+      <div class="qh-hint">แตะจุดเพื่อเลือก / เอาออก</div>
+      <div id="q-reg"></div>
+    </div>
+    <div class="qcard">
+      <div class="qtabs" id="q-mode"><button data-v="fixed">Fixed</button><button data-v="sweep">Sweep</button></div>
+      <div id="q-freq"></div>
+    </div>
+    <div class="qcard qlist">
+      <div class="qrow"><span>Duration</span><div id="q-dur"></div></div>
+      <div class="qrow"><span>Intensity</span><div id="q-lvl"></div></div>
+      <div class="qrow qpro" id="q-duty-row"><span>Duty <em class="protag">PRO</em></span><div id="q-duty"></div></div>
+      <div class="qrow"><span>EEG Closed-loop</span><button class="protg" id="q-cl" aria-pressed="false"><i></i><span>Off</span></button></div>
+    </div>
+    <div style="height:70px"></div>
+    <div class="qbar"><button class="qsave" id="q-save" aria-label="บันทึกเป็นโปรแกรม">Save</button><button class="btn pri qgo" id="q-go">Start</button></div>
+  </section>
+
+  <!-- BUILDER -->
+  <section class="view" id="v-build" hidden>
+    <input type="text" id="b-name" class="bname" maxlength="40" aria-label="ชื่อโปรแกรม">
+    <div class="row between"><span class="note" id="b-total"></span></div>
+    <div class="tline big" id="b-tline"></div>
+    <div class="bsteps" id="b-steps"></div>
+    <button class="addstep" id="b-add">+ Add Step</button>
+    <div class="row" style="gap:8px"><button class="btn" id="b-cancel" style="flex:1">Cancel</button><button class="btn pri" id="b-save" style="flex:2">Save Program</button></div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section class="view" id="v-cal" hidden>
+    <div class="row between"><button class="iconbtn sm" id="c-prev" aria-label="เดือนก่อน">‹</button><h3 id="c-month" style="margin:0"></h3><button class="iconbtn sm" id="c-next" aria-label="เดือนถัดไป">›</button></div>
+    <div class="calg" id="c-grid"></div>
+    <div class="row between"><h3 id="c-day" style="margin:0"></h3><span class="note" id="c-daysum"></span></div>
+    <div class="view" id="c-list" style="gap:8px"></div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="view" id="v-sum" hidden>
+    <div class="done-top"><div class="done-ic">✓</div><div class="pd-n" id="s-title"></div><div class="note" id="s-sub"></div></div>
+    <div class="clsum" id="s-cl" hidden></div>
+    <div class="ph-map" id="s-dose"></div>
+    <div class="note" style="text-align:center" id="s-dnote"></div>
+    <div class="steps2" id="s-steps"></div>
+    <button class="btn pri" id="s-home">Back to Home</button>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view admin" id="v-set" hidden>
+    <div class="adm-h">Mode</div>
+    <div class="card"><div class="seg" id="c-mode"><button data-v="easy">Easy</button><button data-v="pro">Pro</button></div>
+      <div class="prolist" id="c-prolist"></div></div>
+    <div class="adm-h">Simulation</div>
+    <div class="card"><div class="seg" id="c-speed"><button data-v="20">Demo ×20</button><button data-v="1">Real time</button></div><span class="note">เครื่องต้นแบบ · เลือกเวลาจริงเมื่อต่อหมวกจริง</span></div>
+    <div id="c-pro" hidden>
+      <div class="adm-h">Helmet</div>
+      <div class="card"><div class="fields">
+        <label class="f">Wavelength (nm)<input type="number" id="c-wl" min="600" max="1100"></label>
+        <label class="f">Irradiance at 100% (mW/cm²)<input type="number" id="c-irr" min="1" max="200"></label>
+        <label class="f">Default duty (%)<input type="number" id="c-duty" min="10" max="90" step="10"></label>
+        <label class="f">Daily max (min)<input type="number" id="c-daymax" min="5" max="120"></label>
+      </div><span class="note" id="c-saved">ใช้คำนวณปริมาณแสง (J/cm²) และส่งให้หมวก</span></div>
+      <details class="card devx"><summary>Developer · ESP32 commands & references</summary><div id="c-proto"></div><div id="c-refs"></div></details>
+    </div>
+  </section>
+  </div>
+
+  <!-- RUN -->
+  <div class="runov" id="run" hidden>
+    <div class="r-top"><span class="r-prog" id="r-name"></span></div>
+    <div class="r-tl" id="r-tl"></div>
+    <div class="r-big2"><svg viewBox="0 0 200 200" class="r-ringsvg" aria-hidden="true"><circle cx="100" cy="100" r="96" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/><circle id="r-ring" cx="100" cy="100" r="96" fill="none" stroke="#FF8A7A" stroke-width="3.5" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 100 100)"/></svg><div class="r-head3" id="r-head"></div></div>
+    <div class="r-bigt2"><b id="r-left">0:00</b><span>remaining</span></div>
+    <div class="r-hz"><b id="r-hz">0</b><span>Hz</span></div>
+    <div class="r-wave" id="r-wave" aria-hidden="true"></div>
+    <div class="r-step" id="r-step"></div>
+    <div class="r-eeg" id="r-eeg" hidden></div>
+    <div class="r-ctl2"><button class="rbtn" id="r-pause" aria-label="Pause">Pause</button><button class="rbtn stop" id="r-stop">Stop</button></div>
+  </div>
+
+  <div class="ob" id="pf" hidden><div class="ob-card" style="text-align:left;align-items:stretch">
+    <div class="row between"><h2>Who’s using the helmet?</h2><button class="iconbtn" id="pf-x" aria-label="ปิด">✕</button></div>
+    <div class="plist" id="pf-list"></div>
+    <button class="btn sm" id="pf-add" style="width:100%">+ Add User</button>
+    <div class="pform" id="pf-form" hidden>
+      <div class="fields"><label class="f">ชื่อที่แสดง<input type="text" id="pf-name" placeholder="เช่น คุณสมศรี"></label><label class="f">อายุ (ปี)<input type="number" id="pf-age" min="3" max="110"></label></div>
+      <span class="err" id="pf-err" hidden></span>
+      <button class="btn pri" id="pf-save">บันทึกและใช้งาน</button>
+    </div>
+  </div></div>
+ </div>
+</div>
+
+<aside class="hw nfhw" aria-label="หมวก PBM จำลอง">
+  <h2>หมวก PBM 19 จุด (จำลอง)</h2>
+  <div class="hwcard">
+    <div class="row between"><span class="lbl" id="hw-st">ว่าง</span><span class="note mono" id="hw-f">— Hz</span></div>
+    <div id="hw-head"></div>
+    <span class="note">แสงบนจอแสดงแบบนุ่ม ไม่กะพริบตามความถี่จริง เพื่อความปลอดภัยต่อสายตา</span>
+  </div>
+  <h2>คำสั่ง BLE → ESP32</h2>
+  <div class="hwcard"><div class="plog mono" id="hw-log">—</div></div>
+</aside>
+</div>
+
+<script>
+const IC={eye:'<path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ eyeoff:'<path d="M3 11c2.2 2.6 5.3 4 9 4s6.8-1.4 9-4"/><path d="M6 14.2 4.5 16.5M12 15v2.7M18 14.2l1.5 2.3"/>',
+ bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.8.6 1.1 1.4 1.1 2.2h5c0-.8.3-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+ target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+ leaf:'<path d="M5 19c0-8 6-13 14-14 0 8-5 14-13 14"/><path d="M5 19c3-4 6-6 9-7"/>',
+ smile:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8"/><circle cx="9" cy="10" r=".9" fill="currentColor"/><circle cx="15" cy="10" r=".9" fill="currentColor"/>',
+ pulse:'<path d="M3 12h4l2-5 4 10 2-5h6"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ cup:'<path d="M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M4 4l16 16" />',
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+ plug:'<path d="M9 3v5M15 3v5"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
+ trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+ quiet:'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/>'};
+const icon=(k,sz=24)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+function paintIcons(root=document){root.querySelectorAll('[data-i]').forEach(e=>{if(!e.dataset.done){e.innerHTML=icon(e.dataset.i,e.classList.contains('ico-s')?16:24);e.dataset.done=1}})}
+const $=id=>document.getElementById(id);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const fmtT=s=>{s=Math.max(0,Math.ceil(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`};
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+Object.assign(IC,{brain:'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>',sprout:'<path d="M12 20v-8"/><path d="M12 12C12 8 9 6 5 6c0 4 3 6 7 6z"/><path d="M12 10c0-3 2.5-5 6-5 0 3.5-2.5 5-6 5z"/>',balance:'<path d="M12 4v16M7 20h10M5 8h14"/><path d="M5 8l-2.5 6h5zM19 8l-2.5 6h5z"/>',wave:'<path d="M2 12c2-4 3.5-4 5 0s3 4 5 0 3-4 5 0 3 4 5 0"/>',bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>',star:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+ up:'<path d="M6 15l6-6 6 6"/>',dn:'<path d="M6 9l6 6 6-6"/>',thermo:'<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>',shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>'});
+
+/* ---------- 19 emission points (10-20 system) ---------- */
+const PTS=['Fp1','Fp2','F7','F3','Fz','F4','F8','T3','C3','Cz','C4','T4','T5','P3','Pz','P4','T6','O1','O2'];
+const XY={Fp1:[90,32],Fp2:[130,32],F7:[52,60],F3:[81,67],Fz:[110,65],F4:[139,67],F8:[168,60],T3:[33,106],C3:[71,106],Cz:[110,106],C4:[149,106],T4:[187,106],T5:[52,152],P3:[81,145],Pz:[110,147],P4:[139,145],T6:[168,152],O1:[90,180],O2:[130,180]};
+const REG={all:['ทั้งหมด',PTS],frontal:['หน้าผาก',['Fp1','Fp2','F7','F3','Fz','F4','F8']],central:['กลาง',['C3','Cz','C4']],temporal:['ขมับ',['T3','T4','T5','T6']],parietal:['ข้างบน',['P3','Pz','P4']],occipital:['ท้ายทอย',['O1','O2']],
+ midline:['แนวกลาง',['Fz','Cz','Pz']],left:['ซีกซ้าย',['Fp1','F7','F3','T3','C3','T5','P3','O1']],right:['ซีกขวา',['Fp2','F8','F4','T4','C4','T6','P4','O2']],
+ lu:['ซ้ายบน',['Fp1','F7','F3','T3','C3']],ru:['ขวาบน',['Fp2','F8','F4','T4','C4']],ll:['ซ้ายล่าง',['T5','P3','O1']],rl:['ขวาล่าง',['T6','P4','O2']],limbic:['Limbic≈',['Fp1','Fp2','O1','O2']]};
+/* Vielight NeuroPro 2 positions → nearest 10-20 points on our helmet (no intranasal LEDs: NL/NR → Fp1/Fp2) */
+const VL={NL:['Fp1'],NR:['Fp2'],L1:['F7','F3'],C1:['Fz'],R1:['F4','F8'],L2:['T3','C3'],C2:['Cz'],R2:['C4','T4'],L3:['T5','P3'],C3:['Pz'],R3:['P4','T6'],C4:['O1','O2']};
+const vl=(...k)=>[...new Set(k.flatMap(x=>VL[x]))];
+const VL_ALL=vl('NL','NR','L1','C1','R1','L2','C2','R2','L3','C3','R3','C4'),VL_LIMBIC=vl('NL','NR','C4'),VL_CHI=vl('NL','NR','L1','L2','L3','R1','R2','R3');
+const st=(label,pts,o)=>({label,pts,P:100,mode:'fixed',f:10,f1:8,f2:12,fb:40,pat:'sync',dur:600,...o});
+const PRESETS=[
+ {id:'std-alpha',src:'std',name:'Alpha Calm',cat:'relax',ic:'leaf',goal:'ทั้งศีรษะ 10 นาที · โปรโตคอลมาตรฐานที่ใช้บ่อยในงานวิจัย คู่กับ 40 Hz',steps:[st('All 10 Hz',PTS,{f:10,dur:600})],fixedHz:1,note:'คงที่ 10 Hz ตามงานวิจัย (ไม่ปรับตาม IAPF) · คู่กับ Gamma Focus 40 Hz'},
+ {id:'isw-conc',src:'isw',name:'Gamma Focus',cat:'focus',ic:'target',goal:'40 Hz ทั้งศีรษะ สำหรับช่วงที่ต้องตั้งใจทำงาน',steps:[st('All 40 Hz',PTS,{f:40,dur:600})],note:'ซ้ายบน: ตั้งเป้าและลงมือ · ขวาบน: รับรู้สถานการณ์ อารมณ์มั่นคง'},
+ {id:'isw-cog',src:'isw',name:'Memory & Learning',cat:'learn',ic:'brain',goal:'ช่วงที่ต้องอ่าน จดจำ หรือคิดเลข · เน้นด้านหลังศีรษะ',steps:[st('Posterior 10 Hz',['T5','P3','Pz','P4','T6','O1','O2'],{f:10,dur:600})],note:'ปรับ 8–10 Hz ได้ตามผู้ใช้ · ซ้ายล่าง: การอ่าน เขียน คำนวณ · ขวาล่าง: การรับรู้รอบตัว มิติสัมพันธ์'},
+ {id:'isw-sleep',src:'isw',name:'Sleep Ready',cat:'relax',ic:'moon',goal:'ก่อนนอน ช่วยให้ใจสงบ คิดวนน้อยลง',steps:[st('All 14 Hz',PTS,{f:14,dur:600})],note:'ปรับ 13–15 Hz ได้ตามผู้ใช้ · ซ้ายบน: อารมณ์นิ่ง · ขวาบน: ลดคิดวน · ขวาล่าง: คลายกล้ามเนื้อ'},
+ {id:'isw-dev',src:'isw',name:'Growing Mind',cat:'learn',ic:'sprout',goal:'สั้น 5 นาที ทั้งศีรษะ สำหรับเด็กที่กำลังเรียนรู้',steps:[st('All 9 Hz',PTS,{f:9,dur:300})],note:'ปรับ 8–10 Hz ได้ตามผู้ใช้'},
+ {id:'isw-dep',src:'isw',name:'Bright Mood',cat:'focus',ic:'sun',goal:'ช่วงที่รู้สึกเหนื่อยใจ อยากสดชื่นขึ้น · เน้นหน้าผาก',steps:[st('Frontal 18 Hz',REG.frontal[1],{f:18,dur:600})],note:'ปรับ 16–19 Hz ได้ตามผู้ใช้'},
+ {id:'isw-anx',src:'isw',name:'Deep Calm',cat:'relax',ic:'leaf',goal:'คลื่นช้า 7 Hz ช่วยให้รู้สึกผ่อนคลายลึก',steps:[st('Temporal–Posterior 7 Hz',['T3','T4','T5','P3','Pz','P4','T6','O1','O2'],{f:7,dur:600})],note:'เลือกคลื่นช้าเพื่อผ่อนคลายลึก'},
+ {id:'vl-emo',src:'vl',name:'Inner Balance',cat:'relax',ic:'balance',goal:'คลื่นช้าก่อน แล้วไล่ขึ้นเป็นคลื่นเร็ว ให้รู้สึกมั่นคง',steps:[st('Limbic Theta',VL_LIMBIC,{f:4,dur:120}),st('Limbic Theta',VL_LIMBIC,{f:5,dur:120}),st('Limbic Theta',VL_LIMBIC,{f:6,dur:120}),st('Full Thalpha → MidBeta Long Sweep',VL_ALL,{mode:'sweep',f1:8,f2:19,dur:660})]},
+ {id:'vl-relax',src:'vl',name:'Relax & Recover',cat:'relax',ic:'wave',goal:'ไล่คลื่นอัลฟา ช่วยคลายเครียดและคลายกล้ามเนื้อ',steps:[st('Gentle Broad Sweep',VL_ALL,{mode:'sweep',f1:1,f2:45,P:50,dur:120}),st('Limbic Thalpha',VL_LIMBIC,{f:7.5,dur:240}),st('Gentle Short Alpha Sweep',VL_ALL,{mode:'sweep',f1:8,f2:12,P:50,dur:180}),st('Chiastic Alpha',VL_CHI,{f:10,dur:600}),st('Limbic Alpha',VL_LIMBIC,{f:10,dur:300})]},
+ {id:'vl-focus',src:'vl',name:'Beta Focus',cat:'focus',ic:'bolt',goal:'ไล่คลื่นเบต้า ช่วยให้คิดคล่อง ทำงานได้ต่อเนื่อง',steps:[st('Gentle Broad Sweep',VL_ALL,{mode:'sweep',f1:1,f2:45,P:50,dur:300}),st('Full MidBeta Short Sweep',VL_ALL,{mode:'sweep',f1:18,f2:22,dur:240}),st('Full HiBeta Long Sweep',VL_ALL,{mode:'sweep',f1:24,f2:35,dur:660}),st('Full LoBeta Short Sweep',VL_ALL,{mode:'sweep',f1:12,f2:15,dur:240})]},
+ {id:'vl-flex',src:'vl',name:'Creative Flow',cat:'learn',ic:'spark',goal:'อัลฟาสลับแกมมา สำหรับงานคิดสร้างสรรค์',steps:[st('Gentle Broad Sweep',VL_ALL,{mode:'sweep',f1:1,f2:45,P:50,dur:420}),st('Chiastic Alpha + C4',vl('NL','NR','L1','L2','L3','R1','R2','R3','C4'),{f:10,dur:300}),st('Full Gamma Long Sweep',VL_ALL,{mode:'sweep',f1:40,f2:51,dur:660})]},
+ {id:'vl-enh',off:1,src:'vl',name:'Sharp & Active',cat:'focus',ic:'pulse',goal:'ทีต้าผสมแกมมา ช่วยความไวในการคิดและการเคลื่อนไหว',steps:[st('Limbic Theta',VL_LIMBIC,{f:6,dur:120}),st('Cross Frequency Theta + HiGamma',vl('NL','NR','L1','C1','R1','C2','L3','C3','R3','C4'),{mode:'cross',f:6,fb:70,dur:600}),st('Limbic Alpha',VL_LIMBIC,{f:10,dur:600})]}];
+const CATS={clinic:['Clinic','#2F64AD'],relax:['Relax','#D9533F'],focus:['Focus','#D89A1E'],learn:['Learn','#B5487A'],custom:['My Programs','#3D6FB4']};
+const SRC={std:['Research','โปรโตคอลมาตรฐานงานวิจัย'],isw:['iSyncWave','แนวทาง iMediSync'],vl:['Vielight','แปลงจาก NeuroPro 2'],custom:['ของฉัน','สร้างเอง']};
+const FMAX=100;/* device limit */
+const S={mode:ls.get('nl_pbm_mode','easy'),speed:20,filter:'all',spec:ls.get('nl_pbm_spec',{wl:810,irr:40,duty:50,tmax:41,daymax:40})};
+const customs=()=>ls.get('nl_pbm_custom',[]);
+/* clinic remote program (Monitor › Remote, kept by the app shell in bs_prog per profile): PBM programs written by the clinic,
+   which programs are shown, whether the user may build their own, and the hour after which PBM is not used (clinic rule: 18:00) */
+const PRG=()=>{try{return JSON.parse(localStorage.getItem('bs_prog')||'{}')[curUser().id]||null}catch(e){return null}};
+const pgAllow=id=>{const g=PRG(),a=g&&g.program&&g.program.allow&&g.program.allow.pbm;return !a||a.includes(id)};
+const pgSelf=()=>{const g=PRG();return !g||!g.program||g.program.selfMade!==false};
+const pgUntil=()=>{const g=PRG();if(!g)return null;const p=g.program||{};return 'pbmUntil' in p?p.pbmUntil:18};
+const clinicProgs=()=>{const g=PRG();return ((g&&g.protocols)||[]).filter(p=>p.kind==='pbm'&&p.params&&p.params.steps).map(p=>({id:p.id,src:'clinic',cat:'clinic',ic:'shield',name:p.name,goal:p.note||'โปรแกรมจากคลินิก',steps:p.params.steps.map(s=>st(s.label||'Step',s.pts,s))}))};
+const allProgs=()=>[...PRESETS.filter(p=>!p.off),...clinicProgs(),...(pgSelf()?customs():[])].filter(p=>p.src==='custom'||pgAllow(p.id));
+const findProg=id=>[...PRESETS,...clinicProgs(),...customs()].find(p=>p.id===id);
+const totalDur=p=>p.steps.reduce((a,s)=>a+s.dur,0);
+const sweepKind=s=>{const w=Math.abs(s.f2-s.f1);return w>=20?'Broad Sweep':w===11?'Long Sweep':w<=5?'Short Sweep':'Sweep'};
+const freqTxt=s=>s.mode==='sweep'?`${s.f1}→${s.f2} Hz`:s.mode==='cross'?`${s.f} + ${s.fb} Hz`:`${s.f} Hz`;
+const bandCol=f=>f<4?'#9AA5A1':f<8?'#7A5BC9':f<13?'#2A8C82':f<30?'#D89A1E':'#C2563A';
+const stepCol=s=>s.mode==='cross'?'linear-gradient(90deg,#7A5BC9,#C2563A)':s.mode==='sweep'?(s.f2-s.f1>=100?'linear-gradient(90deg,#9AA5A1,#C2563A)':`linear-gradient(90deg,${bandCol(s.f1)},${bandCol(s.f2)})`):bandCol(s.f);
+const regName=pts=>{const k=Object.entries(REG).find(([,v])=>v[1].length===pts.length&&v[1].every(x=>pts.includes(x)));return k?k[1][0]:`${pts.length} จุด`};
+const PAT={sync:'Sync',alt:'L ↔ R',wave:'Wave'};
+const PATN={sync:'ทุกจุดกะพริบพร้อมกัน',alt:'ซีกซ้ายกับซีกขวาสลับกัน (เฟสต่างกันครึ่งรอบ)',wave:'ไล่จังหวะจากหน้าไปหลังเป็นลูกคลื่น'};
+const dutyOf=s=>s&&s.duty?s.duty:S.spec.duty;
+
+/* ---------- head map ---------- */
+function headPBM(o={}){const on=o.on||{},sel=o.sel,dark=o.dark,sz=o.size||220,lab=o.labels!==false,val=o.val;
+  let g=`<ellipse cx="18" cy="106" rx="8" ry="15" class="hh-e"/><ellipse cx="202" cy="106" rx="8" ry="15" class="hh-e"/><path d="M100 22 L110 6 L120 22 Z" class="hh-e"/><circle cx="110" cy="106" r="88" class="hh-c"/><line x1="22" x2="198" y1="106" y2="106" class="hh-l"/><line x1="110" x2="110" y1="18" y2="194" class="hh-l"/>`;
+  PTS.forEach(n=>{const [x,y]=XY[n],v=on[n]||0,s=sel&&sel.has(n);
+    if(v>0)g+=`<circle cx="${x}" cy="${y}" r="${13+v*11}" fill="url(#pg)" opacity="${.35+.65*v}"/>`;
+    g+=`<circle cx="${x}" cy="${y}" r="11" class="hp ${v>0?'on':''} ${s?'sel':''}" data-pt="${n}" ${v>0?`style="fill:rgba(232,70,60,${.45+.55*v})"`:''}/>`;
+    if(lab)g+=`<text x="${x}" y="${y+3}" text-anchor="middle" class="hp-t ${v>0||s?'on':''}" data-pt="${n}">${val&&val[n]!=null?val[n]:n}</text>`});
+  return `<svg viewBox="0 0 220 200" width="${sz}" class="headpbm ${dark?'dark':''} ${o.click?'click':''}"><defs><radialGradient id="pg"><stop offset="0" stop-color="#FF6B5B" stop-opacity=".7"/><stop offset="1" stop-color="#FF6B5B" stop-opacity="0"/></radialGradient></defs>${g}</svg>`}
+function headGlow(o={}){const on=o.on||{},dk=o.dark,sz=o.size||200,pre=o.pre||'hg'+Math.random().toString(36).slice(2,6);
+  const hf=dk?'rgba(255,255,255,.07)':'var(--surface-2)',hs=dk?'rgba(255,255,255,.16)':'var(--line)',dot=dk?'rgba(255,255,255,.28)':'var(--muted)';
+  let g=`<defs><radialGradient id="${pre}b"><stop offset="0" stop-color="#FF9A8A" stop-opacity="1"/><stop offset=".4" stop-color="#FF6B5B" stop-opacity=".55"/><stop offset="1" stop-color="#FF6B5B" stop-opacity="0"/></radialGradient><clipPath id="${pre}c"><ellipse cx="110" cy="106" rx="86" ry="92"/></clipPath></defs>
+   <path d="M98 16 Q110 2 122 16" fill="none" stroke="${hs}" stroke-width="2" stroke-linecap="round"/><path d="M24 92 Q14 106 24 120M196 92 Q206 106 196 120" fill="none" stroke="${hs}" stroke-width="2" stroke-linecap="round"/>
+   <ellipse cx="110" cy="106" rx="86" ry="92" fill="${hf}" stroke="${hs}" stroke-width="1.5"/><g clip-path="url(#${pre}c)" style="mix-blend-mode:${dk?'screen':'normal'}">`;
+  PTS.forEach(n=>{const [x,y]=XY[n],v=on[n]||0;g+=`<circle id="${pre}-${n}" cx="${x}" cy="${y}" r="${o.big?34:30}" fill="url(#${pre}b)" opacity="${!o.big?v:Math.min(1,v*(dk?1.7:1.25))}"/>`});g+='</g>';
+  PTS.forEach(n=>{const [x,y]=XY[n],v=on[n]||0;g+=`<circle cx="${x}" cy="${y}" r="${v>0?3:1.8}" fill="${v>0?(dk?'#fff':'#B13E2C'):dot}" opacity="${v>0?.95:.6}"/>`});
+  return `<svg viewBox="0 0 220 200" width="${sz}" class="hglow" aria-hidden="true">${g}</svg>`}
+const litOf=(pts,P=100)=>Object.fromEntries(pts.map(n=>[n,P/100]));
+function tline(p,cur){const T=totalDur(p);return p.steps.map((s,i)=>`<i class="${i===cur?'on':''}" style="flex:${s.dur} 1 0;background:${stepCol(s)}" title="${s.label} · ${freqTxt(s)} · ${fmtT(s.dur)}"></i>`).join('')}
+
+
+/* ---------- program rationale + evidence (shown on each built-in program) ---------- */
+const PREF={
+ hamblin:'Hamblin MR (2016) Shining light on the head: photobiomodulation for brain disorders. BBA Clin 6:113–124.',
+ salehpour:'Salehpour F, et al. (2018) Brain photobiomodulation therapy: a narrative review. Mol Neurobiol 55:6601–6636.',
+ hashmi:'Hashmi JT, et al. (2010) Effect of pulsing in low-level light therapy. Lasers Surg Med 42:450–466.',
+ zomorrodi:'Zomorrodi R, et al. (2019) Pulsed near infrared transcranial and intranasal photobiomodulation significantly modulates neural oscillations: a pilot exploratory study. Sci Rep 9:6309.',
+ spera:'Spera V, et al. (2021) Pilot study on dose-dependent effects of transcranial photobiomodulation on brain electrical oscillations. J Alzheimers Dis 83:1481–1498.',
+ saltmarche:'Saltmarche AE, et al. (2017) Significant improvement in cognition in mild to moderately severe dementia cases treated with transcranial plus intranasal photobiomodulation: case series report. Photomed Laser Surg 35:432–441.',
+ chao:'Chao LL (2019) Effects of home photobiomodulation treatments on cognitive and behavioral function, cerebral perfusion, and resting-state functional connectivity in patients with dementia: a pilot trial. Photobiomodul Photomed Laser Surg 37:133–141.',
+ vargas:'Vargas E, et al. (2017) Beneficial neurocognitive effects of transcranial laser in older adults. Lasers Med Sci 32:1153–1162.',
+ barrett:'Barrett DW, Gonzalez-Lima F (2013) Transcranial infrared laser stimulation produces beneficial cognitive and emotional effects in humans. Neuroscience 230:13–23.',
+ schiffer:'Schiffer F, et al. (2009) Psychological benefits 2 and 4 weeks after a single treatment with near infrared light to the forehead: a pilot study of 10 patients with major depression and anxiety. Behav Brain Funct 5:46.',
+ cassano:'Cassano P, et al. (2018) Transcranial photobiomodulation for the treatment of major depressive disorder: the ELATED-2 pilot trial. Photomed Laser Surg 36:634–646.',
+ iaccarino:'Iaccarino HF, et al. (2016) Gamma frequency entrainment attenuates amyloid load and modifies microglia. Nature 540:230–235.',
+ klimesch:'Klimesch W (1999) EEG alpha and theta oscillations reflect cognitive and memory performance. Brain Res Rev 29:169–195.',
+ sterman:'Sterman MB (1996) Physiological origins and functional correlates of EEG rhythmic activities: implications for self-regulation. Biofeedback Self Regul 21:3–33.',
+ kids:'Transcranial photobiomodulation in children aged 2–6 years: a randomized sham-controlled clinical trial (safety, ASD symptoms, EEG). Front Neurol (2024) 15:1221193.',
+ isw:'iMediSync. iSyncWave PBM Protocol Guide (แนวทางผู้ผลิต).',
+ vl:'Gracefire P. Guide to Neuromodulation: Vielight NeuroPro 2 (แนวทางผู้ผลิต).'};
+const EVL={pilot:['งานวิจัยนำร่อง','มีงานวิจัยขนาดเล็กหรือ pilot ที่ใช้ความถี่หรือตำแหน่งคล้ายกัน แต่ยังไม่มีการทดลองขนาดใหญ่'],guide:['แนวทางผู้ผลิต','ความถี่และลำดับขั้นมาจากแนวทางของผู้ผลิต กลไกพื้นฐานของ PBM มีงานวิจัยรองรับ แต่ยังไม่มีการทดลองกับโปรแกรมนี้โดยตรง']};
+const PINFO={
+ 'isw-cog':{why:'แสงอินฟราเรดใกล้ช่วยให้ไมโทคอนเดรียของเซลล์สมองสร้างพลังงาน (ATP) ได้มากขึ้น ส่วนการกะพริบ 10 Hz อยู่ในย่านอัลฟาที่สัมพันธ์กับความจำและการเรียนรู้ จึงเน้นยิงที่สมองด้านหลัง (ขมับหลัง-ท้ายทอย) ซึ่งเป็นบริเวณที่อัลฟาเด่น',f:'10 Hz · α · ปรับตาม IAPF ได้',ev:'pilot',r:['saltmarche','vargas','klimesch','hamblin','isw']},
+ 'isw-sleep':{why:'ย่าน 13–15 Hz ตรงกับคลื่น SMR และ sleep spindle ซึ่งสัมพันธ์กับภาวะตัวนิ่งและการเข้าสู่การนอน จึงใช้ทั้งศีรษะในขนาดแสงต่ำ 10 นาทีก่อนนอน',f:'14 Hz · SMR',ev:'guide',r:['sterman','hamblin','isw']},
+ 'isw-dev':{why:'เด็กมีความถี่ยอดอัลฟาต่ำกว่าผู้ใหญ่ (ประมาณ 8–10 Hz) จึงใช้ 9 Hz และจำกัดเวลาไว้ที่ 5 นาทีเพื่อให้ขนาดแสงสะสมต่ำ มีการทดลองแบบมีกลุ่มหลอก (sham) ในเด็กเล็กที่รายงานว่าปลอดภัย',f:'9 Hz · α ช่วงเด็ก · 5 นาที',ev:'pilot',r:['kids','klimesch','isw']},
+ 'isw-dep':{why:'งานวิจัยด้านอารมณ์ส่วนใหญ่ยิงแสงที่หน้าผาก (สมองส่วนหน้า) แล้วพบว่าอารมณ์ดีขึ้นในกลุ่มตัวอย่างขนาดเล็ก ความถี่ 18 Hz (เบต้า) มาจากแนวทางผู้ผลิต เพราะงานวิจัยเหล่านั้นส่วนใหญ่ใช้แสงต่อเนื่อง ไม่กะพริบ',f:'18 Hz · β · หน้าผาก',ev:'pilot',r:['schiffer','cassano','barrett','isw']},
+ 'isw-anx':{why:'ใช้คลื่นช้าย่านทีต้า (7 Hz) ที่ขมับและด้านหลังเพื่อพาเข้าสู่ภาวะผ่อนคลายลึก งานวิจัยด้านความวิตกกังวลยังมีน้อยและใช้แสงต่อเนื่องที่หน้าผาก ความถี่นี้จึงอิงแนวทางผู้ผลิตเป็นหลัก',f:'7 Hz · θ',ev:'guide',r:['schiffer','hamblin','isw']},
+ 'std-alpha':{why:'การกะพริบ 10 Hz ทั้งศีรษะเป็นหนึ่งในสองโปรโตคอลที่ใช้บ่อยที่สุดในงานวิจัย tPBM (อีกตัวคือ 40 Hz) 10 Hz อยู่ในย่านอัลฟา สัมพันธ์กับภาวะผ่อนคลายแต่ตื่นตัว และมีการศึกษานำร่องในผู้สูงอายุที่ความจำถดถอย ใช้ความถี่คงที่ 10 Hz ตามงานวิจัย ไม่ปรับตาม IAPF เพื่อเทียบผลกับงานวิจัยได้',f:'10 Hz · α · คงที่',ev:'pilot',r:['saltmarche','zomorrodi','spera','klimesch','hamblin']},
+ 'isw-conc':{why:'40 Hz (แกมมา) เป็นความถี่ที่มีงานวิจัยมากที่สุด การกะพริบ 40 Hz ทั้งศีรษะทำให้พลังงานคลื่นอัลฟา เบต้า และแกมมาเพิ่มขึ้นใน EEG และมีการทดลองนำร่องใช้ที่บ้านในผู้มีภาวะสมองเสื่อม',f:'40 Hz · γ',ev:'pilot',r:['zomorrodi','chao','iaccarino','isw']},
+ 'vl-emo':{why:'ไล่ความถี่จากทีต้าขึ้นไปทีละขั้นที่จุดบริเวณลิมบิก (หน้าผากล่างและท้ายทอย) ตามแนวทางของ Gracefire เพื่อปรับสมดุลอารมณ์ แสงกะพริบเปลี่ยนคลื่นสมองได้จริงและขึ้นกับขนาดแสง แต่ลำดับขั้นนี้ยังไม่มีการทดลองโดยตรง',f:'4→ ไล่ขึ้น · θ',ev:'guide',r:['zomorrodi','spera','vl']},
+ 'vl-relax':{why:'เริ่มด้วยการกวาดความถี่กว้าง (1–45 Hz) ที่ความแรงต่ำ แล้วค่อยเข้าย่านอัลฟา ซึ่งปรับตาม IAPF ของผู้ใช้จากผลประเมิน (E) เพื่อคลายเครียดและคลายกล้ามเนื้อ',f:'Sweep → α (IAPF)',ev:'guide',r:['zomorrodi','klimesch','vl']},
+ 'vl-focus':{why:'กวาดความถี่ก่อน แล้วเข้าย่านเบต้ากลางทั้งศีรษะเพื่อความตื่นตัวและสมาธิต่อเนื่อง ลำดับขั้นมาจากแนวทางผู้ผลิต และมีงานวิจัยยืนยันว่าแสงกะพริบเปลี่ยนพลังงานคลื่นเบต้าได้',f:'Sweep → β',ev:'guide',r:['zomorrodi','spera','vl']},
+ 'vl-flex':{why:'สลับอัลฟาที่จุดซ้าย-ขวาแบบไขว้ (chiastic เป็นการเลือกตำแหน่ง ไม่ใช่การสลับจังหวะ) กับแกมมาทั้งศีรษะ เพื่อการคิดสร้างสรรค์ ตามแนวทางผู้ผลิต',f:'α ↔ γ',ev:'guide',r:['zomorrodi','saltmarche','vl']},
+ 'vl-enh':{why:'ผสมทีต้าเข้ากับแกมมาสูง (cross-frequency) ตามแนวทางผู้ผลิต เพื่อความไวในการคิดและการเคลื่อนไหว ถือเป็นขั้นทดลอง ยังไม่มีงานวิจัยในคนที่ใช้รูปแบบนี้โดยตรง',f:'θ + γ',ev:'guide',r:['zomorrodi','spera','vl']}};
+function aboutHTML(p){const I=PINFO[p.id];if(!I)return '';const E=EVL[I.ev],rs=[...I.r,'hashmi'];
+  return `<div class="pa-h"><b>About</b><span class="evc ev-${I.ev}">${E[0]}</span></div><p class="pa-w">${I.why}</p>
+  <div class="pa-r"><span>${icon('pulse',16)}<em>ความถี่</em><b>${I.f}</b></span><span>${icon('target',16)}<em>ตำแหน่ง</em><b>${[...new Set(p.steps.map(s=>regName(s.pts)))].join(' → ')}</b></span><span>${icon('bulb',16)}<em>กลไก</em><b>NIR → ไมโทคอนเดรีย (CCO) → ATP · การกะพริบ → คลื่นสมอง</b></span></div>
+  <p class="pa-e">${E[1]}</p>
+  <details class="pa-ref"><summary>อ้างอิง ${rs.length}</summary><ol>${rs.map(k=>`<li>${PREF[k]}</li>`).join('')}</ol></details>
+  <p class="pa-d">ใช้เพื่อเสริมสุขภาวะ ไม่ใช่การรักษาโรค ถ้ามีภาวะทางการแพทย์หรือเป็นโรคลมชัก ควรปรึกษาแพทย์ก่อน</p>`}
+/* ---------- program builder: one card per step, simple choices first, details tucked away ---------- */
+const BA={whole:['Whole head',PTS],front:['Front',['Fp1','Fp2','F7','F3','Fz','F4','F8']],back:['Back',['T5','P3','Pz','P4','T6','O1','O2']],limbic:['Limbic',['Fp1','Fp2','O1','O2']]};
+const areaOf=pts=>{const e=Object.entries(BA).find(([,v])=>v[1].length===pts.length&&v[1].every(x=>pts.includes(x)));return e?e[0]:'custom'};
+const areaName=pts=>{const k=areaOf(pts);return k==='custom'?`Custom · ${pts.length} จุด`:BA[k][0]};
+const autoLabel=s=>`${areaName(s.pts)} · ${s.mode==='sweep'?`${s.f1}→${s.f2} Hz`:s.mode==='cross'?`${s.f}+${s.fb} Hz`:`${s.f} Hz`}`;
+let openCustom=false;
+function renderBuild(){const p=draft;$('b-name').value=p.name;$('b-name').oninput=()=>p.name=$('b-name').value;
+  $('b-total').textContent=`${p.steps.length} step${p.steps.length>1?'s':''} · total ${fmtT(totalDur(p))}`;$('b-tline').innerHTML=tline(p,editIdx);
+  $('b-steps').innerHTML=p.steps.map((s,i)=>i===editIdx?editCard(s,i):`<button class="bcard" data-open="${i}"><span class="sn">${i+1}</span><span class="sdot" style="background:${stepCol(s)}"></span><span class="sbody"><b>${autoLabel(s)}</b><span>${fmtT(s.dur)} · ${s.P>=100?'Full':s.P<=50?'Gentle':s.P+'%'}</span></span><span class="chev">›</span></button>`).join('');
+  $('b-steps').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{editIdx=+b.dataset.open;openCustom=false;renderBuild()});
+  bindEdit(p.steps[editIdx],editIdx);paintIcons($('v-build'))}
+function editCard(s,i){const ak=areaOf(s.pts),n=draft.steps.length;
+  return `<div class="ecard"><div class="ec-h"><span class="sn">${i+1}</span><b>${autoLabel(s)}</b><span class="ec-a"><button data-a="up" ${i?'':'disabled'} aria-label="ขึ้น">${icon('up',16)}</button><button data-a="dn" ${i<n-1?'':'disabled'} aria-label="ลง">${icon('dn',16)}</button><button data-a="dup" aria-label="ทำซ้ำ">${icon('copy',15)}</button><button data-a="del" ${n>1?'':'disabled'} aria-label="ลบ">${icon('trash',15)}</button></span></div>
+   <div class="ec-s"><span class="lbl">Area</span><div class="chipsx wrap">${Object.entries(BA).map(([k,[l]])=>`<button data-area="${k}" class="${ak===k?'on':''}">${l}</button>`).join('')}<button data-area="custom" class="${ak==='custom'||openCustom?'on':''}">Custom…</button></div>
+     ${ak==='custom'||openCustom?`<div class="ph-map">${headPBM({on:litOf(s.pts),sel:new Set(s.pts),click:true,size:220})}</div><div class="note" style="text-align:center">แตะจุดเพื่อเลือก / เอาออก</div>`:''}</div>
+   <div class="ec-s"><div class="row between"><span class="lbl">Frequency</span><div class="seg mini" data-g="mode"><button data-v="fixed" aria-pressed="${s.mode!=='sweep'}">Fixed</button><button data-v="sweep" aria-pressed="${s.mode==='sweep'}">Sweep</button></div></div>
+     ${s.mode==='sweep'?`<div class="swrow"><div><span class="note">From</span><div data-st="f1">${stepperHTML(s.f1,'Hz')}</div></div><span class="swarr">→</span><div><span class="note">To</span><div data-st="f2">${stepperHTML(s.f2,'Hz')}</div></div></div><div class="chipsx wrap">${QSW.map(([l,a,b])=>`<button data-sw="${a},${b}" class="${s.f1===a&&s.f2===b?'on':''}">${l}</button>`).join('')}</div>`
+       :`<div class="stepw" data-st="f">${stepperHTML(s.f,'Hz')}</div><div class="chipsx wrap">${QB.map(([l,f])=>`<button data-f="${f}" class="bchip ${s.f===f?'on':''}" style="--bc:${bandCol(f)}">${l} ${f}</button>`).join('')}</div>`}</div>
+   <div class="ec-row"><div><span class="lbl">Duration</span><div data-st="dur">${stepperHTML(Math.round(s.dur/60),'min')}</div></div><div><span class="lbl">Power</span><div class="seg mini" data-g="P"><button data-v="50" aria-pressed="${s.P<=50}">Gentle</button><button data-v="100" aria-pressed="${s.P>=100}">Full</button></div></div></div>
+   <div class="ec-duty"><span class="lbl">Duty cycle</span>
+     <div data-st="duty">${stepperHTML(dutyOf(s),'%')}</div>
+   </div></div>`}
+function bindEdit(s,i){const card=$('b-steps').querySelector('.ecard');if(!card)return;const P=draft.steps,re=()=>renderBuild();
+  card.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const A=b.dataset.a;if(A==='up'&&i>0){[P[i-1],P[i]]=[P[i],P[i-1]];editIdx=i-1}if(A==='dn'&&i<P.length-1){[P[i+1],P[i]]=[P[i],P[i+1]];editIdx=i+1}if(A==='dup'){P.splice(i+1,0,JSON.parse(JSON.stringify(s)));editIdx=i+1}if(A==='del'&&P.length>1){P.splice(i,1);editIdx=Math.max(0,i-1)}re()});
+  card.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{const k=b.dataset.area;if(k==='custom'){openCustom=true}else{openCustom=false;s.pts=[...BA[k][1]]}s.label=autoLabel(s);re()});
+  card.querySelectorAll('[data-pt]').forEach(c=>c.onclick=()=>{const n=c.dataset.pt;s.pts=s.pts.includes(n)?s.pts.filter(x=>x!==n):PTS.filter(x=>x===n||s.pts.includes(x));openCustom=true;s.label=autoLabel(s);re()});
+  card.querySelectorAll('[data-g]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=g.dataset.g,v=b.dataset.v;if(k==='mode')s.mode=v;else if(k==='P')s.P=+v;else s[k]=v;s.label=autoLabel(s);re()}));
+  card.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{s.f=+b.dataset.f;s.label=autoLabel(s);re()});
+  card.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{const [a,c]=b.dataset.sw.split(',').map(Number);s.f1=a;s.f2=c;s.label=autoLabel(s);re()});
+  const ST={f:[1,FMAX,s.f<10?.5:1],f1:[1,FMAX,1],f2:[1,FMAX,1],fb:[1,FMAX,1],duty:[10,90,10]};
+  card.querySelectorAll('[data-st]').forEach(el=>{const k=el.dataset.st;if(k==='dur')bindStepper(el,Math.round(s.dur/60),1,30,v=>{s.dur=v*60;re()});else bindStepper(el,k==='duty'?dutyOf(s):s[k],ST[k][0],ST[k][1],v=>{s[k]=v;s.label=autoLabel(s);re()},ST[k][2])});
+  const cx=card.querySelector('[data-x=cross]');if(cx)cx.onchange=()=>{s.mode=cx.checked?'cross':'fixed';s.label=autoLabel(s);re()};
+  }
+$('b-add').onclick=()=>{const last=draft.steps[draft.steps.length-1];const s=st('',[...last.pts],{f:10,dur:300,P:last.P});s.label=autoLabel(s);draft.steps.push(s);editIdx=draft.steps.length-1;openCustom=false;renderBuild()};
+$('b-cancel').onclick=()=>{draft.fromNew?go('home'):go('prog')};
+$('b-save').onclick=()=>{if(draft.steps.some(s=>!s.pts.length)){$('b-total').innerHTML='<span style="color:var(--danger)">มีขั้นที่ยังไม่ได้เลือกจุดปล่อยแสง</span>';return}draft.steps.forEach(s=>s.label=s.label||autoLabel(s));const c=customs(),i=c.findIndex(x=>x.id===draft.id);delete draft.fromNew;draft.src='custom';draft.cat='custom';if(i>=0)c[i]=draft;else c.push(draft);ls.set('nl_pbm_custom',c);curProg=draft;curStep=0;go('prog');renderProg()};
+
+/* ---------- users (shared with the EEG / neurofeedback modules) ---------- */
+const AVC=['#3D6FB4','#2A8C82','#C2563A','#7A5BC9','#B07A12'];
+function profiles(){let p=ls.get('nl_profiles',null);if(!p||!p.length){p=[{id:'P-001',name:'น้องต้นกล้า',age:8,type:'kid'},{id:'P-002',name:'คุณสมศรี (ตัวอย่าง)',age:72,type:'care'}];ls.set('nl_profiles',p)}return p}
+function curUser(){const ps=profiles();let id=null;try{id=localStorage.getItem('nl_cur')}catch(e){}return ps.find(x=>x.id===id)||ps[0]}
+const ini=n=>n.replace(/^(น้อง|คุณ)/,'').trim().charAt(0)||'?';
+function renderWho(){const u=curUser(),i=profiles().findIndex(x=>x.id===u.id);$('who-name').textContent=u.name;$('who-av').textContent=ini(u.name);$('who-av').style.background=AVC[i%AVC.length]}
+function renderProfiles(){const ps=profiles(),cur=curUser().id;$('pf-list').innerHTML=ps.map((x,i)=>`<button class="prow ${x.id===cur?'on':''}" data-id="${x.id}"><span class="av" style="background:${AVC[i%AVC.length]}">${ini(x.name)}</span><span class="t"><b>${x.name}</b><span class="note">${x.age} ปี</span></span>${x.id===cur?'<span class="pill ok">กำลังใช้</span>':''}</button>`).join('');
+  $('pf-list').querySelectorAll('.prow').forEach(b=>b.onclick=()=>{try{localStorage.setItem('nl_cur',b.dataset.id)}catch(e){}$('pf').hidden=true;go('home')})}
+$('who').onclick=()=>{renderProfiles();$('pf-form').hidden=true;$('pf-add').hidden=false;$('pf').hidden=false};
+$('pf-x').onclick=()=>$('pf').hidden=true;
+$('pf-add').onclick=()=>{$('pf-form').hidden=false;$('pf-add').hidden=true;$('pf-name').value='';$('pf-age').value='';$('pf-err').hidden=true};
+$('pf-save').onclick=()=>{const n=$('pf-name').value.trim(),a=+$('pf-age').value;if(!n||!a||a<3||a>110){$('pf-err').textContent=!n?'ใส่ชื่อที่แสดงก่อน':'ใส่อายุ 3–110 ปี';$('pf-err').hidden=false;return}
+  const ps=profiles(),id='P-'+String(ps.reduce((m,x)=>Math.max(m,+x.id.slice(2)||0),0)+1).padStart(3,'0');ps.push({id,name:n,age:a,type:a<13?'kid':a<60?'adult':'care'});ls.set('nl_profiles',ps);try{localStorage.setItem('nl_cur',id)}catch(e){}$('pf').hidden=true;go('home')};
+const hist=()=>ls.get('nl_pbm_hist',[]).filter(h=>(h.code||'P-001')===curUser().id);
+const qKey=()=>'nl_pbm_q_'+curUser().id;const queue=()=>ls.get(qKey(),[]);const setQ=q=>ls.set(qKey(),q);
+
+/* ---------- time scaling ---------- */
+function scaled(p,min){if(!min)return p;const f=min*60/totalDur(p);return {...p,_min:min,steps:p.steps.map(s=>({...s,dur:Math.max(10,Math.round(s.dur*f))}))}}
+const qMin=it=>{const p=findProg(it.pid);return p?(it.min||Math.round(totalDur(p)/60)):0};
+
+/* ---------- nav ---------- */
+let view='home',prevView='home',curProg=null,curStep=0,curMin=null,draft=null,editIdx=0,calM=null,calD=null;
+const TITLES={home:'PBM',quick:'Quick Start',prog:'Program',build:'Program Builder',cal:'History',sum:'Complete',set:'Settings'};
+const BACK={quick:'home',prog:'home',build:'prog',cal:'home',sum:'home'};
+function go(v){if(v==='set'&&view!=='set')prevView=view;view=v;['home','quick','prog','build','cal','sum','set'].forEach(k=>$('v-'+k).hidden=k!==v);$('apptitle').textContent=TITLES[v];$('back').hidden=!(BACK[v]||v==='set');$('gear').hidden=v==='set';$('views').scrollTop=0;
+  if(v==='home')renderHome();if(v==='set')renderSet();if(v==='cal')renderCal();paintIcons()}
+$('back').onclick=()=>view==='set'?go(prevView):view==='build'?(draft&&draft.fromNew?go('home'):go('prog')):go(BACK[view]);
+$('gear').onclick=()=>go('set');
+setInterval(()=>{const d=new Date();$('clock').textContent=d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')},30000);
+
+/* ---------- home ---------- */
+const HS={batt:ls.get('nl_pbm_batt',92)};
+const DOW=['อา','จ','อ','พ','พฤ','ศ','ส'];
+const dkey=d=>new Date(d).toDateString();
+function renderHome(){renderWho();const ia=myIAPF();$('finder').innerHTML=`<span class="fd-i">${icon('pulse',16)}</span><span class="fd-b">${ia?`<b>Alpha ของคุณ ${ia.f} Hz</b><span>IAPF · Evaluate ${new Date(ia.date).toLocaleDateString('th-TH',{day:'numeric',month:'short'})} · โปรแกรมที่มี <i class="iab">α</i> ปรับตามค่านี้</span>`:`<b>Alpha ของคุณ</b><span>ยังไม่มี · วัดได้ใน Evaluate · ใช้กับโปรแกรมที่มี <i class="iab">α</i></span>`}</span>${window.parent!==window?'<span class="chev">›</span>':''}`;$('hs').innerHTML=`<span class="bt"><i style="width:${HS.batt}%"></i></span><b>${HS.batt}%</b>`;
+  /* week strip */
+  const H=hist(),now=new Date(),start=new Date(now);start.setDate(now.getDate()-6);let wk=0;
+  const days=Array.from({length:7},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);const m=Math.round(H.filter(h=>dkey(h.date)===dkey(d)).reduce((a,h)=>a+h.sec,0)/60);wk+=m;return {d,m}}),act=days.filter(x=>x.m>0).length,emb=window.parent!==window;
+  {const w=$('week'),h=$('hs');if(h&&w.previousElementSibling!==h)h.after(w);w.classList.add('wk-s')}
+  $('week').innerHTML=`<span class="wk-t"><span class="lbl">7 วัน</span><b>${wk} min</b></span><span class="wk-g">${days.map((x,i)=>`<span class="${i===6?'today':''}" title="${DOW[x.d.getDay()]}"><i style="--o:${x.m?Math.min(1,.35+x.m/30):0}"></i></span>`).join('')}</span><span class="wk-n mono">${act}/7</span><span class="chev">›</span>`;
+  $('week').setAttribute('aria-label',emb?'ดูภาพรวมใน Map':'ดูประวัติรายวัน');
+  /* session queue */
+  const q=queue().filter(it=>findProg(it.pid)),tot=q.reduce((a,it)=>a+qMin(it),0);
+  const rec=recentSessions(),recH=rec.length?`<div class="recall"><span>↺ Repeat</span>${rec.map((r,i)=>`<button data-rc="${i}">${r.items.map(x=>findProg(x.pid).name).join(' + ')}<em>${r.items.reduce((a,x)=>a+qMin(x),0)} min</em></button>`).join('')}</div>`:'';
+  $('sess').classList.toggle('has',q.length>0);
+  if(!q.length)$('sess').innerHTML=`<div class="sess-h"><b>Today’s Session</b><span>ว่าง</span></div><div class="sess-empty"><i>+</i><span>แตะ <b>+</b> ที่โปรแกรมด้านล่างเพื่อเพิ่มเข้าเซสชัน</span></div>${recH}`;
+  else{const plan=q.map(it=>scaled(findProg(it.pid),it.min));
+    $('sess').innerHTML=`<div class="sess-h"><b>Today’s Session</b><span>${tot} min · ${q.length} program${q.length>1?'s':''}</span></div>
+     <div class="tline dk">${plan.map((p,j)=>p.steps.map((s,i)=>`<i style="flex:${s.dur} 1 0;background:${stepCol(s)}${i===0&&j?';margin-left:4px':''}"></i>`).join('')).join('')}</div>
+     <div class="sqq">${q.map((it,i)=>`<div class="sqi"><span class="sqn">${i+1}</span><span class="sqt">${findProg(it.pid).name}</span><span class="sqs"><button data-qd="${i}" aria-label="ลด 1 นาที">−</button><b>${qMin(it)}</b><button data-qu="${i}" aria-label="เพิ่ม 1 นาที">+</button></span><button class="sqx" data-up="${i}" aria-label="เลื่อนขึ้น" ${i?'':'disabled'}>↑</button><button class="sqx" data-rm="${i}" aria-label="เอาออก">✕</button></div>`).join('')}</div>
+     <div class="sess-o"><span>Intensity</span><span id="ss-lvl">${lvlHTML(lvlNow())}</span><span>Closed-loop</span><button class="protg" id="ss-cl" aria-pressed="false"><i></i><span>Off</span></button></div>
+     <button class="btn hbtn" id="sess-go"><span>Start Session</span><span class="hmin">${tot} min</span></button>${recH}`;
+    $('sess').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const q2=queue();q2.splice(+b.dataset.rm,1);setQ(q2);renderHome()});
+    $('sess').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const q2=queue(),i=+b.dataset.up;[q2[i-1],q2[i]]=[q2[i],q2[i-1]];setQ(q2);renderHome()});
+    $('sess').querySelectorAll('[data-qd],[data-qu]').forEach(b=>b.onclick=()=>{const q2=queue(),i=+(b.dataset.qd??b.dataset.qu),it=q2[i],def=Math.round(totalDur(findProg(it.pid))/60);it.min=clamp(qMin(it)+(b.dataset.qd!=null?-1:1),1,60);if(it.min===def)it.min=null;setQ(q2);renderHome()});
+    if(S.mode==='pro')bindStepper($('ss-lvl'),getLvl(),1,10,v=>{setLvl(v);renderHome()});clBtn($('ss-cl'),getCL(),v=>clGate(v,renderHome));$('sess-go').onclick=()=>startRun(queue().filter(it=>findProg(it.pid)).map(it=>scaled(findProg(it.pid),it.min)),true)}
+  $('sess').querySelectorAll('[data-rc]').forEach(b=>b.onclick=()=>{setQ(JSON.parse(JSON.stringify(rec[+b.dataset.rc].items)));renderHome()});
+  /* programs by purpose */
+  const favs=ls.get('nl_pbm_fav',[]),inQ=new Set(q.map(x=>x.pid)),catOf=p=>p.cat||'custom',AP=allProgs(),cats=Object.keys(CATS).filter(k=>AP.some(p=>catOf(p)===k));
+  if(!S.cat||!cats.includes(S.cat)&&S.cat!=='fav')S.cat=cats[0]||'relax';
+  $('h-cats').innerHTML=[...cats.map(k=>[k,CATS[k][0]]),...(favs.length?[['fav','★ Favorites']]:[])].map(([k,l])=>`<button data-c="${k}" class="${S.cat===k?'on':''}">${l}</button>`).join('');
+  $('h-cats').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cat=b.dataset.c;renderHome()});
+  const list=allProgs().filter(p=>S.cat==='fav'?favs.includes(p.id):catOf(p)===S.cat);
+  $('h-list').innerHTML=list.map(p=>{const c=CATS[catOf(p)]||CATS.custom;return `<div class="pr" data-id="${p.id}"><span class="pr-i" style="--cc:${c[1]}">${icon(p.ic||'sun',22)}</span><span class="pr-b"><b>${p.name}${favs.includes(p.id)?' <span class="fv">★</span>':''}</b><span>${fsum(p)} · ${Math.round(totalDur(p)/60)} min${iaBadge(p)}</span><span class="pr-d" hidden>${p.goal}${PINFO[p.id]?`<em class="evc ev-${PINFO[p.id].ev}">${EVL[PINFO[p.id].ev][0]}</em>`:''}</span></span><button class="pr-info" data-info aria-label="คำอธิบาย">i</button><button class="pr-add ${inQ.has(p.id)?'in':''}" data-add="${p.id}" aria-label="ต่อในเซสชัน">${inQ.has(p.id)?'✓':'+'}</button></div>`}).join('')||'<div class="note" style="padding:12px 0">ยังไม่มีโปรแกรมในหมวดนี้</div>';
+  $('h-list').querySelectorAll('.pr').forEach(r=>r.onclick=e=>{if(e.target.closest('[data-info]')){const d=r.querySelector('.pr-d');d.hidden=!d.hidden;e.target.closest('[data-info]').classList.toggle('on',!d.hidden);return}
+    const a2=e.target.closest('[data-add]');if(a2){const q2=queue();if(!q2.some(x=>x.pid===a2.dataset.add))q2.push({pid:a2.dataset.add,min:null});else q2.splice(q2.findIndex(x=>x.pid===a2.dataset.add),1);setQ(q2);renderHome();return}openProg(r.dataset.id)});
+  $('h-new').hidden=S.mode!=='pro'||!pgSelf();$('fab').hidden=!pgSelf();$('h-pro').setAttribute('aria-pressed',S.mode==='pro');paintIcons($('v-home'))}
+$('h-pro').onclick=()=>{S.mode=S.mode==='pro'?'easy':'pro';ls.set('nl_pbm_mode',S.mode);renderHome()};
+function fsum(p){const fs=p.steps.flatMap(s=>s.mode==='sweep'?[s.f1,s.f2]:s.mode==='cross'?[s.f,s.fb]:[s.f]),lo=Math.min(...fs),hi=Math.max(...fs);return lo===hi?`${lo} Hz`:`${lo}–${hi} Hz`}
+/* recall past sessions */
+function recentSessions(){const seen=new Set(),out=[];for(const h of hist().slice().reverse()){if(!h.items)continue;const items=h.items.map(x=>({pid:x.pid||(allProgs().find(p=>p.name===x.name)||{}).id,min:x.min||null})).filter(x=>x.pid&&findProg(x.pid));if(!items.length)continue;const k=items.map(x=>x.pid+':'+(x.min||'')).join('|');if(seen.has(k))continue;seen.add(k);out.push({items,date:h.date});if(out.length>=3)break}return out}
+$('week').onclick=()=>{if(window.parent!==window){parent.postMessage({bs:'tab',t:'M'},'*');return}calM=null;calD=new Date().toDateString();go('cal')};
+$('h-new').onclick=()=>{draft={id:'c-'+Date.now(),src:'custom',cat:'custom',ic:'sun',name:'โปรแกรมใหม่',goal:'สร้างเอง',steps:[st('Whole head · 10 Hz',PTS,{f:10,dur:300})],fromNew:true};editIdx=0;go('build');renderBuild()};
+function todayMin(){const d=dkey(Date.now());return Math.round(hist().filter(h=>dkey(h.date)===d).reduce((a,h)=>a+h.sec,0)/60)}
+
+/* ---------- intensity level + closed-loop preference (per user) ---------- */
+const lvlKey=()=>'nl_pbm_lvl_'+curUser().id,clKey=()=>'nl_pbm_cl_'+curUser().id;
+const getLvl=()=>ls.get(lvlKey(),1),setLvl=v=>ls.set(lvlKey(),clamp(v,1,10)),getCL=()=>!!window._clOn,setCL=v=>{window._clOn=!!v};
+const lvlNote=l=>l===1?'Level 1 · 10% (แนะนำ)':`Level ${l} · ${l*10}% · แนะนำ Level 1`;
+const lvlNow=()=>S.mode==='pro'?getLvl():1;
+function lvlHTML(l){return S.mode==='pro'?stepperHTML(l,'Level')+(l>1?'<span class="lvw">แนะนำ 1</span>':''):'<span class="lvfix">Level 1 · แนะนำ</span>'}
+function clBtn(el,on,cb){el.setAttribute('aria-pressed',on);el.querySelector('span').textContent=on?'On':'Off';el.onclick=()=>cb(!on)}
+
+/* ---------- program detail ---------- */
+function openProg(id){const pg=findProg(id);if(!pg){if(id==='quick'||/^q/.test(id||'')){const f=document.getElementById('fab');if(f){f.click();return}}go('home');return}curProg=pg;curStep=0;curMin=null;go('prog');renderProg()}
+function renderProg(){const base=curProg,p=scaled(base,curMin),s=p.steps[curStep],favs=ls.get('nl_pbm_fav',[]),fv=favs.includes(base.id),L=getLvl(),cl=getCL();
+  $('p-name').innerHTML=`${base.name}<button class="favb ${fv?'on':''}" id="p-fav" aria-label="ติดดาว">${icon('star',20)}</button>`;$('p-goal').innerHTML=`${fsum(base)} · ${base.goal}${progIA(base)?`<span class="ia-note"><i class="iab">α</i> ${myIAPF()?`ย่านอัลฟาปรับเป็น ${myIAPF().f} Hz ตาม IAPF ของคุณ`:'ย่านอัลฟาจะปรับตาม IAPF เมื่อวัดใน Evaluate แล้ว'}</span>`:''}`;
+  $('p-fav').onclick=()=>{let v=ls.get('nl_pbm_fav',[]);v=v.includes(base.id)?v.filter(x=>x!==base.id):[base.id,...v];ls.set('nl_pbm_fav',v);renderProg()};
+  $('p-map').innerHTML=headPBM({on:s.pw?Object.fromEntries(s.pts.map(n=>[n,(s.pw[n]??s.P)/100])):litOf(s.pts,s.P),size:210});
+  $('p-cap').innerHTML=`<b>${s.label}</b><span>${(r=>/จุด/.test(r)?r:r+' · '+s.pts.length+' จุด')(regName(s.pts))} · ${freqTxt(s)} · ${fmtT(s.dur)}${S.mode==='pro'?` · duty ${dutyOf(s)}%`:''}</span>`;
+  $('p-tline').innerHTML=tline(p,curStep);
+  $('p-steps').innerHTML=p.steps.length>1?p.steps.map((x,i)=>`<button class="st2 ${i===curStep?'on':''}" data-idx="${i}"><span class="sdot" style="background:${stepCol(x)}"></span><span>${x.label}</span><span class="mono" style="opacity:.7">${freqTxt(x)}</span><span class="mono">${fmtT(x.dur)}</span></button>`).join(''):'';
+  $('p-steps').querySelectorAll('.st2').forEach(b=>b.onclick=()=>{curStep=+b.dataset.idx;renderProg()});
+  const def=Math.round(totalDur(base)/60),cm=curMin||def;
+  $('p-time').innerHTML=stepperHTML(cm,'min');bindStepper($('p-time'),cm,1,60,v=>{curMin=v===def?null:v;renderProg()});
+  $('p-lvl').innerHTML=lvlHTML(L);if(S.mode==='pro')bindStepper($('p-lvl'),L,1,10,v=>{setLvl(v);renderProg()});
+  clBtn($('p-cl'),cl,v=>clGate(v,renderProg));
+  $('p-time-n').textContent=`${curMin&&curMin!==def?`ปกติ ${def} นาที · `:''}${lvlNote(L)}${cl?' · Closed-loop: วัด EEG ระหว่างพัก · ลดแสงเองถ้า high-β สูง':''}${(()=>{const ia=myIAPF();return ia&&base.steps.some(x=>iaApplies(base,x))?` · Alpha ใช้ ${ia.f} Hz (IAPF)`:''})()}`;
+  $('p-note').textContent=base.note||'';$('p-note').hidden=!base.note;$('p-about').innerHTML=aboutHTML(base);$('p-about').hidden=!PINFO[base.id];
+  const pro=S.mode==='pro';$('p-actions').innerHTML=pro?(base.src==='custom'?`<button class="btn sm" id="pa-edit">${icon('edit',16)} Edit</button><button class="btn sm" id="pa-copy">${icon('copy',16)} Duplicate</button><button class="btn sm" id="pa-del" style="color:var(--danger)">${icon('trash',16)} Delete</button>`:`<button class="btn sm" id="pa-copy" style="flex:1">${icon('copy',16)} Duplicate & Edit</button>`):'';$('p-actions').hidden=!pro;
+  if($('pa-edit'))$('pa-edit').onclick=()=>{draft=JSON.parse(JSON.stringify(base));editIdx=curStep;go('build');renderBuild()};
+  if($('pa-copy'))$('pa-copy').onclick=()=>{draft=JSON.parse(JSON.stringify(base));draft.id='c-'+Date.now();draft.src='custom';draft.cat='custom';draft.name=base.name+' (copy)';editIdx=curStep;go('build');renderBuild()};
+  if($('pa-del'))$('pa-del').onclick=()=>{ls.set('nl_pbm_custom',customs().filter(x=>x.id!==base.id));go('home')};
+  $('p-go').innerHTML=`Start <span class="hmin">${Math.round((totalDur(p)+(cl?clExtra(p.steps):0))/60)} min</span>`;paintIcons($('v-prog'))}
+$('p-go').onclick=()=>startRun([scaled(curProg,curMin)],false);
+$('p-add').onclick=()=>{const q=queue();q.push({pid:curProg.id,min:curMin});setQ(q);go('home')};
+
+/* ---------- simulated EEG (real system: the EEG headset cannot record while PBM is on — electrical interference — so stimulation and measurement alternate) ---------- */
+function eegNew(){const iapf=(()=>{try{const h=JSON.parse(localStorage.getItem('bs_eval_hist')||'[]').filter(x=>x.code===curUser().id&&x.m&&x.m.iapf).pop();if(h)return +h.m.iapf.toFixed(1)}catch(e){}return +(9.3+Math.random()*1.2).toFixed(1)})();return {a:1,b:1,t:1,hb:1,iapf,best:+(iapf+(Math.random()*1.2-.5)).toFixed(1),spike:0}}
+/* hidden brain state moves only while stimulating; it is only *read* in light-off windows */
+function eegDrive(E,dt,f){const k=Math.min(1,dt/50);let aT=1,bT=1,tT=1,hT=1;
+  if(f){const d=Math.abs(f-E.best);aT+=d<1.8?.32*(1-d/1.8):(f>=7&&f<13?.06:0);if(f>=30)aT+=.04;bT+=f>=13&&f<30?.16:f>=30?.12:0;tT+=f<8?.2:f>=13?-.09:0;hT+=f>=25&&f<36?.08:0}
+  E.a+=(aT-E.a)*k;E.b+=(bT-E.b)*k;E.t+=(tT-E.t)*k;E.hb+=(hT-E.hb)*k}
+function eegRest(E,dt){const k=Math.min(1,dt/120);['a','b','t','hb'].forEach(n=>E[n]+=(1-E[n])*k*.6)}
+function eegRead(E,dt){if(E.spike<=0&&Math.random()<dt*.01)E.spike=6+Math.random()*8;if(E.spike>0)E.spike-=dt;const n=()=>(Math.random()-.5)*.05;return {a:E.a+n(),b:E.b+n(),t:E.t+n(),hb:E.hb+n()+(E.spike>0?.45:0)}}
+const pct=(v,b)=>Math.round((v/b-1)*100);
+const sgn=v=>(v>0?'+':'')+v+'%';
+const avgM=arr=>({a:arr.reduce((s,x)=>s+x.a,0)/arr.length,b:arr.reduce((s,x)=>s+x.b,0)/arr.length,t:arr.reduce((s,x)=>s+x.t,0)/arr.length,hb:arr.reduce((s,x)=>s+x.hb,0)/arr.length});
+
+/* ---------- closed-loop plan: baseline → [stimulate ≤3 min → measure 45 s] … → final measure ---------- */
+const CL_PRE=60,CL_MEAS=45,CL_BLK=180;
+function clPlan(steps){const out=[{label:'Baseline EEG',phase:'pre',pts:[],dur:CL_PRE,mode:'none',pj:-1}];
+  steps.forEach((s,gi)=>{const n=Math.max(1,Math.ceil(s.dur/CL_BLK)),bd=Math.round(s.dur/n);for(let k=0;k<n;k++){out.push({...s,dur:bd,grp:gi,blk:k,nblk:n});out.push({label:'Measure',phase:'meas',pts:[],dur:CL_MEAS,mode:'none',pj:-1,grp:gi})}});
+  out[out.length-1]={label:'After EEG',phase:'post',pts:[],dur:CL_PRE,mode:'none',pj:-1};return out}
+const clExtra=steps=>CL_PRE+steps.reduce((a,s)=>a+Math.max(1,Math.ceil(s.dur/CL_BLK))*CL_MEAS,0)-CL_MEAS+CL_PRE;
+
+/* ---------- run engine (the ESP32 times each step itself; the app sends the step, listens to status, and adjusts between blocks) ---------- */
+let RUN=null,runT=null,raf=null;
+const bestKey=()=>'nl_pbm_best_'+curUser().id;
+/* personal alpha frequency (IAPF) measured in Evaluate; alpha-band steps of built-in programs follow it */
+function myIAPF(){const id=curUser().id;try{const e=JSON.parse(localStorage.getItem('bs_eval_hist')||'[]').filter(x=>x.code===id&&!x.example&&x.m&&x.m.iapf).pop();if(e)return {f:+e.m.iapf.toFixed(1),date:e.date}}catch(x){}
+  try{const e=JSON.parse(localStorage.getItem('nl_eeg_hist')||'[]').filter(x=>x.code===id&&x.m&&x.m.iapf).pop();if(e)return {f:+(+e.m.iapf).toFixed(1),date:e.date}}catch(x){}return null}
+const iaApplies=(p,s)=>p&&p.src!=='custom'&&p.src!=='clinic'&&!p.fixedHz&&s.mode==='fixed'&&s.f>=8&&s.f<=12.5;
+function progIA(p){return !!(p&&p.steps&&p.steps.some(s=>iaApplies(p,s)))}
+function iaBadge(p){if(!progIA(p))return '';const ia=myIAPF();return `<span class="iab" title="ความถี่ย่านอัลฟาปรับตาม IAPF ของคุณ">α${ia?' '+ia.f:''}</span>`}
+function pgLate(u){let d=$('pg-late');if(!d){d=document.createElement('div');d.id='pg-late';d.className='pg-late';document.body.appendChild(d)}
+  d.innerHTML=`<div><b>งดใช้ PBM หลัง ${u}:00</b><span>คลินิกตั้งไว้ให้ใช้แสงช่วงเช้าถึงก่อน ${u}:00 เพื่อไม่รบกวนการนอน · ทำรอบถัดไปตามกำหนดการพรุ่งนี้</span><button class="btn" id="pg-ok">ตกลง</button></div>`;d.hidden=false;$('pg-ok').onclick=()=>d.hidden=true}
+function startRun(progs,fromQ,opt={}){if(!progs.length)return;{const u=pgUntil(),n=new Date();if(u!=null&&n.getHours()+n.getMinutes()/60>=u){pgLate(u);return}}const finder=!!opt.finder,cl=finder||(opt.cl??getCL());let steps=progs.flatMap((p,j)=>p.steps.map(s=>({...s,pat:'sync',pj:j,cat:p.cat||'custom'})));
+  if(cl)steps=clPlan(steps);const dose={};PTS.forEach(n=>dose[n]=0);
+  RUN={progs,steps,fromQ,cl,finder,lvl0:opt.lvl??lvlNow(),lvl:opt.lvl??lvlNow(),si:-1,t:0,el:0,paused:false,dose,done:[],sec:progs.map(()=>0),E:eegNew(),base:null,samp:[],last:null,resp:[],ev:[],fOff:{},tense:0,best:null,ia:(myIAPF()||{}).f||null,cands:null};
+  $('run').hidden=false;$('r-pause').textContent='Pause';$('r-eeg').hidden=!cl;nextStep();clearInterval(runT);runT=setInterval(runTick,100);anim()}
+function rtl(){return RUN.steps.map((s,i)=>`<i class="${i===RUN.si?'on':''}" style="flex:${s.dur} 1 0;background:${s.phase?'rgba(255,255,255,.22)':stepCol(s)}${i&&s.pj!==RUN.steps[i-1].pj&&s.pj>=0&&RUN.steps[i-1].pj>=0?';margin-left:4px':''}"></i>`).join('')}
+function clEv(t,pkt){RUN.ev.push(t);if(pkt)hwLog(JSON.stringify(pkt))}
+function goalOf(m,b,cat){return cat==='focus'?pct(m.b/m.t,b.b/b.t):pct(m.a,b.a)}
+function nextStep(){const R=RUN;if(R.si>=0){const p=R.steps[R.si];if(!p.phase)R.done.push(R.si);else endMeasure(p)}R.si++;R.t=0;R.samp=[];if(R.si>=R.steps.length)return finishRun(true);const s=R.steps[R.si];
+  $('r-tl').innerHTML=rtl();$('r-head').innerHTML=headGlow({size:260,dark:runDk(),pre:'rh',big:1});R.wn=null;
+  if(s.phase){const T={pre:'Baseline',meas:'Measure',post:'After'}[s.phase];
+    $('r-name').textContent=R.finder?'Frequency Finder':'Closed-loop';$('r-step').innerHTML=`<b>${icon('eyeoff',18)} หลับตา</b><span>${T} · EEG</span>`;hwLog(JSON.stringify({cmd:'light',v:'off'})+'\n'+JSON.stringify({cmd:'eeg',v:s.phase}));return}
+  /* finder: candidate frequencies are set after the baseline (own alpha peak ±1 Hz, plus 40 Hz) */
+  if(R.finder&&s.lvlTest!=null){const fr=R.resp.filter(x=>x.kind==='f');const bf=fr.length?fr.reduce((p,x)=>x.score>p.score?x:p):{f:R.E.iapf};s.f=bf.f;R.lvl=s.lvlTest;s.label=`Level ${s.lvlTest}`}
+  else if(R.finder&&s.cand!=null){if(!R.cands){const i=R.E.iapf;R.cands=[+(i-1).toFixed(1),i,+(i+1).toFixed(1),40]}s.f=R.cands[s.cand];s.label=`Test ${s.cand+1}/4`}
+  /* personalise alpha-band steps: the user's best tested frequency, else their alpha peak */
+  else if(R.ia&&!s.f0&&iaApplies(R.progs[s.pj],s)){const tgt=R.ia;if(Math.abs(s.f-tgt)>=.2){s.f0=s.f;R.steps.forEach(x=>{if((x===s||(s.grp!=null&&x.grp===s.grp))&&!x.phase){x.f0=x.f;x.f=tgt}});clEv(`Alpha ${s.f0} → ${tgt} Hz (IAPF)`)}}
+  const off=R.fOff[s.grp]||0,fNow=s.mode==='fixed'?clamp(+(s.f+off).toFixed(1),1,FMAX):s.f;
+  const mask=PTS.reduce((m,n,i)=>s.pts.includes(n)?m|(1<<i):m,0),pw=PTS.map(n=>s.pts.includes(n)?Math.round(ptPower(s,n)*100):0),M='0x'+mask.toString(16).toUpperCase();
+  const pkt=s.mode==='sweep'?{cmd:'step',i:R.si,mask:M,mode:'sweep',f1:s.f1,f2:s.f2,df:1,dt:+(s.dur/(Math.abs(s.f2-s.f1)+1)).toFixed(2),duty:dutyOf(s),pat:s.pat,dur:s.dur}:{cmd:'step',i:R.si,mask:M,mode:s.mode,f:fNow,...(s.mode==='cross'?{fb:s.fb}:{}),duty:dutyOf(s),pat:s.pat,dur:s.dur};
+  hwLog((R.cl?JSON.stringify({cmd:'eeg',v:'off'})+'\n':'')+JSON.stringify(pkt)+'\n'+JSON.stringify({cmd:'pwr',v:pw}));
+  const pr=R.progs[s.pj];$('r-name').textContent=R.finder?'Frequency Finder':R.progs.length>1?`${pr.name} · ${s.pj+1}/${R.progs.length}`:pr.name;
+  $('r-step').innerHTML=`<b>${s.label}</b>${s.nblk>1?`<span>${s.blk+1} / ${s.nblk}</span>`:''}`}
+/* decisions happen only after a light-off measurement */
+function endMeasure(p){const R=RUN;if(!R.samp.length)return;const m=avgM(R.samp);R.last={...m,phase:p.phase};
+  if(p.phase==='pre'){R.base=m;clEv(`ค่าเริ่มต้นพร้อม · ยอดอัลฟา ${R.E.iapf} Hz`);return}
+  if(p.phase==='post')R.postM=m;
+  const blk=[...R.steps.slice(0,R.si)].reverse().find(x=>!x.phase),g=goalOf(m,R.base,blk?blk.cat:'relax'),hbU=pct(m.hb,R.base.hb);(R.trace=R.trace||[]).push({ph:p.phase,a:pct(m.a,R.base.a),hb:hbU});
+  if(R.finder&&blk&&blk.cand!=null){const sc=blk.f>=30?pct(m.b,R.base.b):pct(m.a,R.base.a);R.resp.push({kind:'f',f:blk.f,score:sc});clEv(`${blk.f} Hz → ${sgn(sc)} ${blk.f>=30?'β':'α'}`);return}
+  if(R.finder&&blk&&blk.lvlTest!=null){const sc=blk.f>=30?pct(m.b,R.base.b):pct(m.a,R.base.a);R.resp.push({kind:'l',lvl:blk.lvlTest,f:blk.f,score:sc,hb:hbU});clEv(`Level ${blk.lvlTest} → ${sgn(sc)}${hbU>25?` · high-β ${sgn(hbU)}`:''}`);return}
+  if(blk)R.resp.push({f:blk.mode==='fixed'?+(blk.f+(R.fOff[blk.grp]||0)).toFixed(1):blk.mode==='sweep'?`${blk.f1}→${blk.f2}`:`${blk.f}+${blk.fb}`,score:g,label:blk.label});
+  if(p.phase==='post')return;
+  if(hbU>35&&R.lvl>1){R.lvl--;clEv(`high-β สูง ${sgn(hbU)} → ลดแสงเหลือ Level ${R.lvl}`,{cmd:'gain',level:R.lvl})}
+  /* closed-loop no longer changes frequency: it only lowers intensity when high-beta rises, and logs EEG before/after */
+  if(blk)clEv(`ช่วงที่ผ่านมา ${sgn(g)} ${blk.cat==='focus'?'(β/θ)':'(α)'}`)}
+function freqAt(s,t){if(s.mode==='none')return 0;if(s.mode!=='sweep')return clamp(s.f+(RUN&&RUN.fOff[s.grp]||0),1,FMAX);const n=Math.abs(s.f2-s.f1)+1,k=Math.min(n-1,Math.floor(t/(s.dur/n)));return s.f1+(s.f2>=s.f1?k:-k)}
+function ptPower(s,n){if(!s.pts.includes(n))return 0;return clamp((RUN?RUN.lvl:lvlNow())*.1*((s.pw?.[n]??s.P)/100),0,1)}
+function runTick(){const R=RUN;if(!R||R.paused)return;const dt=.1*S.speed,s=R.steps[R.si];R.t+=dt;R.el+=dt;if(s.pj>=0)R.sec[s.pj]+=dt;const duty=dutyOf(s)/100,patF=1;
+  const f=freqAt(s,R.t);R.fnow=f;setWave(s.phase?0:f);if(!s.phase)PTS.forEach(n=>{R.dose[n]+=S.spec.irr*ptPower(s,n)*duty*patF/1000*dt});
+  if(R.cl){if(s.phase){eegRest(R.E,dt);if(R.t>3)R.samp.push(eegRead(R.E,dt))}else eegDrive(R.E,dt,f);renderEEG(s)}
+  $('r-hz').parentElement.style.visibility=s.phase?'hidden':'visible';$('r-hz').textContent=s.phase?'':s.mode==='cross'?`${s.f}+${s.fb}`:Number.isInteger(f)?f:(+f).toFixed(1);
+  const T=R.steps.reduce((a,x)=>a+x.dur,0),gone=R.steps.slice(0,R.si).reduce((a,x)=>a+x.dur,0)+R.t;$('r-left').textContent=fmtT(T-gone);$('r-ring').setAttribute('stroke-dasharray',`${(gone/T*100).toFixed(2)} 100`);$('r-ring').setAttribute('stroke',s.phase?'#F5A394':'#FF8A7A');
+  $('hw-st').textContent=s.phase?'วัด EEG · ปิดแสง':`ขั้น ${R.si+1} · ${s.pts.length} จุด · Level ${R.lvl} · EEG ปิด`;$('hw-f').textContent=$('r-hz').textContent+' Hz';
+  if(Math.floor(R.el/2)!==Math.floor((R.el-dt)/2))hwLog(JSON.stringify(s.phase?{st:'eeg',i:R.si,n:R.samp.length}:{st:'run',i:R.si,f:+(+f).toFixed(1),batt:HS.batt}));
+  if(R.t>=s.dur)nextStep()}
+function renderEEG(s){const R=RUN,el=$('r-eeg');$('run').classList.toggle('eegm',!!s.phase);
+  /* Finder: one row of candidates, filled in as each measurement finishes */
+  if(R.finder){const fr=R.resp.filter(x=>x.kind==='f'),lv=R.resp.filter(x=>x.kind==='l'),cands=R.cands||[];
+    const curF=!s.phase&&s.cand!=null?s.f:null,curL=!s.phase&&s.lvlTest!=null?s.lvlTest:null;
+    const best=fr.length?fr.reduce((p,x)=>x.score>p.score?x:p):null;
+    el.hidden=false;el.innerHTML=`<div class="fc-row">${cands.length?cands.map(f=>{const r=fr.find(x=>x.f===f);return `<span class="fc ${f===curF?'cur':''} ${best&&r&&best.f===f&&fr.length===cands.length?'best':''}"><b>${f}</b><em>${r?sgn(r.score):f===curF?'●':'·'}</em></span>`}).join(''):'<span class="fc wide"><em>Baseline</em></span>'}</div>
+      ${lv.length||curL?`<div class="fc-row">${[1,2].map(l=>{const r=lv.find(x=>x.lvl===l);return `<span class="fc ${l===curL?'cur':''}"><b>L${l}</b><em>${r?sgn(r.score):l===curL?'●':'·'}</em></span>`}).join('')}</div>`:''}
+      ${s.phase?`<div class="re-wait"><i style="width:${Math.min(100,R.t/s.dur*100)}%"></i></div>`:''}`;if(s.phase)el.prepend(scopeEl(s));return}
+  /* closed-loop programs: show the card only while measuring */
+  if(!s.phase){el.hidden=true;return}
+  el.hidden=false;if(el.dataset.si!=R.si||!el.querySelector('.esc')){el.dataset.si=R.si;el.innerHTML='<div class="re-bands2" id="re-bands"></div><div class="re-line"><i id="re-pr"></i></div>';el.prepend(scopeEl(s))}
+  $('re-pr').style.width=Math.min(100,R.t/s.dur*100)+'%';
+  const m=R.samp.length?avgM(R.samp.slice(-8)):null,B=[['t','θ','ง่วง'],['a','α','ผ่อนคลาย'],['b','β','ตื่นตัว'],['hb','hβ','เครียด/เกร็ง']];
+  $('re-bands').innerHTML=B.map(([k,g,th])=>{const v=m?(R.base&&s.phase!=='pre'?pct(m[k],R.base[k]):null):null;
+    return `<span class="rb2 rb-${k}" title="${th}"><i></i>${g}<b>${v==null?(m?'—':'…'):sgn(v)}</b></span>`}).join('')}
+/* live EEG scope shown while the light is off (simulated from the run's EEG state) */
+function scopeEl(s){const R=RUN,T={pre:'Baseline',meas:'Measure',post:'After'}[s.phase]||'EEG',w=document.createElement('div');w.className='esc';
+  w.innerHTML=`<div class="esc-h"><span><i class="re-dot live"></i>${T}</span><span class="mono">α ${R.E.iapf} Hz</span></div><canvas width="640" height="300"></canvas>`;
+  const cv=w.querySelector('canvas'),cx=cv.getContext('2d'),CH=['F3','F4','Fz','Cz','Pz'],N=640,buf=CH.map(()=>new Float32Array(N));let t=0,last=performance.now(),ph=CH.map((_,i)=>i*1.7);
+  const gen=(E,n)=>{for(let k=0;k<n;k++){t+=1/220;CH.forEach((c,i)=>{const b=buf[i];b.copyWithin(0,1);const env=.55+.45*Math.sin(2*Math.PI*.25*t+ph[i]),post=i===4?1.5:i>=2?1.25:.9;
+      b[N-1]=E.a*post*env*Math.sin(2*Math.PI*E.iapf*t+ph[i])+.45*E.t*Math.sin(2*Math.PI*5.5*t+ph[i]*2)+.22*E.b*Math.sin(2*Math.PI*19*t+i)+(E.spike>0?.5*(Math.random()-.5)*E.hb:0)+.12*(Math.random()-.5)})}};
+  gen(R.E,N);
+  const loop=now=>{if(!w.isConnected||!RUN)return;const dt=Math.min(.05,(now-last)/1000);last=now;const E=RUN.E,fs=220,n=Math.max(1,Math.round(dt*fs)),dk=runDk();gen(E,n);
+    cx.clearRect(0,0,640,300);const rowH=300/CH.length;cx.font='600 18px ui-monospace,monospace';
+    cx.font='500 15px ui-monospace,monospace';CH.forEach((c,i)=>{const y0=rowH*(i+.5),b=buf[i];
+      cx.fillStyle=dk?'rgba(255,255,255,.32)':'rgba(20,40,36,.38)';cx.fillText(c,0,y0+5);
+      cx.strokeStyle=dk?(i===4?'#FFB3A6':'rgba(255,156,140,.75)'):(i===4?'#C84F3C':'rgba(217,96,76,.75)');cx.lineWidth=i===4?2.2:1.5;cx.save();cx.beginPath();cx.rect(36,0,604,300);cx.clip();cx.beginPath();for(let x=0;x<N;x++){const y=y0-b[x]*rowH*.26;x?cx.lineTo(x,y):cx.moveTo(x,y)}cx.stroke();cx.restore()});
+    requestAnimationFrame(loop)};
+  requestAnimationFrame(loop);return w}
+function anim(){cancelAnimationFrame(raf);const f=()=>{if(!RUN)return;const R=RUN,s=R.steps[R.si];if(s){const now=performance.now()/1000,on={};
+    PTS.forEach(n=>{const P=ptPower(s,n);if(!P||s.phase){on[n]=0;return}if(R.paused){on[n]=.28;return}const [x,y]=XY[n];let m;
+      /* soft visual only (≤1 Hz); the real pulse frequency is shown as a number, never flashed on screen */
+      const fv=Math.min(1,.5+.012*(R.fnow||10)),ph=now*2*Math.PI*fv;if(s.pat==='alt')m=.3+.7*(.5+.5*Math.sin(ph+(x<110?0:Math.PI)));else if(s.pat==='wave')m=.3+.7*(.5+.5*Math.sin(ph-y/40));else{const w=.5+.5*Math.sin(ph);m=.35+.65*w*w*(3-2*w)}on[n]=Math.max(.5,Math.min(1,P*1.5))*m});
+    $('r-head').innerHTML=headGlow({on,size:260,dark:runDk(),pre:'rh',big:1});$('hw-head').innerHTML=headPBM({on,size:250})}raf=requestAnimationFrame(f)};raf=requestAnimationFrame(f)}
+function hwLog(t){const el=$('hw-log');el.textContent=(t+'\n'+(el.textContent==='—'?'':el.textContent)).split('\n').slice(0,8).join('\n')}
+$('r-pause').onclick=()=>{if(!RUN)return;RUN.paused=!RUN.paused;$('r-pause').textContent=RUN.paused?'Resume':'Pause';hwLog(JSON.stringify({cmd:RUN.paused?'pause':'resume'}))};
+$('r-stop').onclick=()=>{if(RUN){hwLog(JSON.stringify({cmd:'stop'}));finishRun(false)}};
+function finishRun(complete){if(complete)doneChime();const R=RUN;if(R.si<R.steps.length&&R.steps[R.si]&&R.steps[R.si].phase)endMeasure(R.steps[R.si]);clearInterval(runT);cancelAnimationFrame(raf);RUN=null;$('run').hidden=true;$('hw-st').textContent='ว่าง';$('hw-f').textContent='— Hz';$('hw-head').innerHTML=headPBM({size:250});
+  if(R.el<5)return;
+  let fnd=null;if(R.finder){const fr=R.resp.filter(x=>x.kind==='f'),lr=R.resp.filter(x=>x.kind==='l');if(fr.length){const best=fr.reduce((a,x)=>x.score>a.score?x:a);const l1=lr.find(x=>x.lvl===1),l2=lr.find(x=>x.lvl===2);const lvl=l1&&l2&&l2.score-l1.score>=8&&l2.hb<=25?2:1;fnd={iapf:R.E.iapf,resp:fr,lresp:lr,best,lvl};if(complete)ls.set(bestKey(),{f:best.f,score:best.score,lvl,date:new Date().toISOString()})}}
+  const post=R.postM||R.last,cl=R.cl&&R.base&&post?{iapf:R.E.iapf,d:{a:pct(post.a,R.base.a),b:pct(post.b,R.base.b),t:pct(post.t,R.base.t),hb:pct(post.hb,R.base.hb)},resp:R.finder?[]:R.resp.slice(-8),ev:R.ev.slice(-6),trace:(R.trace||[]).slice(-12),lvl0:R.lvl0}:null;
+  const rec={code:curUser().id,date:new Date().toISOString(),items:R.finder?[{pid:'finder',name:'Frequency Finder',plan:0,sec:Math.round(R.el)}]:R.progs.map((p,j)=>({pid:p.id,min:p._min||null,name:p.name,plan:Math.round(totalDur(p)),sec:Math.round(R.sec[j])})),sec:Math.round(R.el),complete,lvl:fnd?fnd.lvl:R.lvl,cl,fnd,dose:Object.fromEntries(PTS.map(n=>[n,+R.dose[n].toFixed(2)]))};
+  const h=ls.get('nl_pbm_hist',[]);h.push(rec);ls.set('nl_pbm_hist',h.slice(-300));if(R.fromQ&&complete)setQ([]);HS.batt=Math.max(5,HS.batt-Math.max(1,Math.round(R.el/300)));ls.set('nl_pbm_batt',HS.batt);showSum(rec,R);go('sum')}
+function showSum(r,R){const vals=Object.values(r.dose),dmax=Math.max(...vals,.001),used=vals.filter(v=>v>0),avg=used.length?used.reduce((a,v)=>a+v,0)/used.length:0;
+  $('s-title').textContent=r.complete?'Session Complete':'Stopped Early';$('s-sub').textContent=r.items.map(x=>x.name).join(' → ');
+  const tiles=[[fmtT(r.sec),'เวลา'],['L'+r.lvl,'ความแรง'],[avg.toFixed(2),'J/cm² เฉลี่ย']];
+  let h=`<div class="sm-tiles">${tiles.map(([v,l])=>`<span><b>${v}</b><em>${l}</em></span>`).join('')}</div>`;
+  if(r.cl){const D=r.cl.d,tr=r.cl.trace||[],a=D.a,big=Math.abs(a)>=10;
+    /* alpha across the session: baseline = 0, each light-off measurement, then after */
+    const pts=[0,...tr.map(x=>x.a)],mx=Math.max(15,...pts.map(Math.abs)),W=300,H=84,X=i=>14+i*(W-28)/Math.max(1,pts.length-1),Y=v=>H/2-v/mx*(H/2-12);
+    const chart=pts.length>1?`<svg viewBox="0 0 ${W} ${H}" class="sm-ch" role="img" aria-label="Alpha ระหว่างเซสชัน"><line x1="10" x2="${W-10}" y1="${H/2}" y2="${H/2}" stroke="var(--line)" stroke-dasharray="3 3"/><rect x="10" y="${Y(10)}" width="${W-20}" height="${Y(-10)-Y(10)}" fill="var(--muted)" opacity=".08"/>
+      <polyline points="${pts.map((v,i)=>`${X(i)},${Y(v)}`).join(' ')}" fill="none" stroke="var(--coral)" stroke-width="2" stroke-linejoin="round"/>${pts.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="${i===pts.length-1?4:2.6}" fill="var(--coral)"/>`).join('')}
+      <text x="${X(0)}" y="${H-2}" class="sm-ax" text-anchor="start">ก่อน</text><text x="${X(pts.length-1)}" y="${H-2}" class="sm-ax" text-anchor="end">หลัง</text></svg>`:'';
+    const chip=(l,v,warn)=>`<span class="${warn?'w':''}"><em>${l}</em>${sgn(v)}</span>`;
+    const drop=r.cl.lvl0&&r.lvl<r.cl.lvl0;
+    h+=`<div class="sm-eeg"><div class="row between"><b>EEG · Alpha</b><span class="note">IAPF ${r.cl.iapf} Hz</span></div>
+      <div class="sm-big"><b style="color:${big&&a>0?'var(--ok)':'var(--ink)'}">${sgn(a)}</b><span class="tag ${big?'on':''}">${big?(a>0?'เพิ่มขึ้น':'ลดลง'):'อยู่ในช่วงปกติ ±10%'}</span></div>${chart}
+      <div class="sm-chips">${chip('β',D.b)}${chip('θ',D.t)}${chip('high-β',D.hb,D.hb>20)}${drop?`<span class="w"><em>ความแรง</em>L${r.cl.lvl0}→L${r.lvl}</span>`:''}</div></div>`}
+  $('s-cl').hidden=false;$('s-cl').innerHTML=h;
+  $('s-dose').innerHTML=headPBM({on:Object.fromEntries(PTS.map(n=>[n,r.dose[n]/dmax])),size:190});
+  $('s-dnote').textContent=used.length?`${used.length} จุด · สูงสุด ${dmax.toFixed(2)} J/cm²`:'';
+  $('s-steps').innerHTML=r.items.length>1?r.items.map(x=>`<div class="st2 ${x.sec>=x.plan-2?'':'off'}"><span class="sdot ok">${x.sec>=x.plan-2?'✓':'–'}</span><span>${x.name}</span><span class="mono">${fmtT(x.sec)}</span></div>`).join(''):''}
+$('s-home').onclick=()=>go('home');
+/* ---------- Frequency Finder: which stimulation frequency does this brain respond to? ---------- */
+function startFinder(){const p={id:'finder',name:'Frequency Finder',cat:'relax',steps:[...[0,1,2,3].map(i=>({...st(`Test ${i+1}/4`,PTS,{f:10,dur:120}),cand:i})),...[1,2].map(l=>({...st(`Level ${l}`,PTS,{f:10,dur:120}),lvlTest:l}))]};startRun([p],false,{finder:true,lvl:1})}
+
+
+/* ---------- calendar (what was done on which day) ---------- */
+function renderCal(){const H=hist(),now=new Date();if(!calM)calM=new Date(now.getFullYear(),now.getMonth(),1);if(!calD)calD=dkey(now);
+  $('c-month').textContent=calM.toLocaleDateString('th-TH',{month:'long',year:'numeric'});
+  const first=calM.getDay(),days=new Date(calM.getFullYear(),calM.getMonth()+1,0).getDate();let g=DOW.map(d=>`<span class="cw">${d}</span>`).join('')+Array.from({length:first},()=>'<span></span>').join('');
+  for(let d=1;d<=days;d++){const dt=new Date(calM.getFullYear(),calM.getMonth(),d),k=dkey(dt),hs=H.filter(h=>dkey(h.date)===k),m=Math.round(hs.reduce((a,h)=>a+h.sec,0)/60);
+    g+=`<button class="cd ${k===calD?'sel':''} ${k===dkey(now)?'today':''} ${hs.length?'has':''}" data-k="${k}"><b>${d}</b>${hs.length?`<i style="opacity:${clamp(.35+m/40,.35,1)}"></i>`:''}</button>`}
+  $('c-grid').innerHTML=g;$('c-grid').querySelectorAll('.cd').forEach(b=>b.onclick=()=>{calD=b.dataset.k;renderCal()});
+  const hs=H.filter(h=>dkey(h.date)===calD).reverse(),m=Math.round(hs.reduce((a,h)=>a+h.sec,0)/60);
+  $('c-day').textContent=new Date(calD).toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'short'});$('c-daysum').textContent=hs.length?`${hs.length} sessions · ${m} min`:'';
+  const mth=H.filter(h=>{const d=new Date(h.date);return d.getMonth()===calM.getMonth()&&d.getFullYear()===calM.getFullYear()}),dd=new Set(mth.map(h=>dkey(h.date))).size;
+  $('c-list').innerHTML=(hs.length?hs.map(h=>`<div class="cl"><span class="cl-t mono">${new Date(h.date).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</span><span class="cl-b"><b>${h.items?h.items.map(x=>x.name).join(' → '):h.name}</b><span>${fmtT(h.sec)}${h.complete?'':' · หยุดก่อนจบ'}</span></span>${h.items?`<button class="cl-r" data-rep="${encodeURIComponent(JSON.stringify(h.items.map(x=>({pid:x.pid||(allProgs().find(p=>p.name===x.name)||{}).id,min:x.min||null})).filter(x=>x.pid)))}">Repeat</button>`:''}</div>`).join(''):'<div class="note" style="text-align:center;padding:14px 0">ไม่มีการใช้งานวันนี้</div>')+
+    `<div class="cal-sum"><div><b>${dd}</b><span>days this month</span></div><div><b>${mth.length}</b><span>sessions</span></div><div><b>${Math.round(mth.reduce((a,h)=>a+h.sec,0)/60)}</b><span>minutes</span></div></div>`}
+$('c-list').addEventListener('click',e=>{const b=e.target.closest('[data-rep]');if(!b)return;const it=JSON.parse(decodeURIComponent(b.dataset.rep)).filter(x=>findProg(x.pid));if(it.length){setQ(it);go('home')}});
+$('c-prev').onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);renderCal()};
+$('c-next').onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);renderCal()};
+
+/* ---------- settings ---------- */
+function renderSet(){const pro=S.mode==='pro';
+  $('c-mode').querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',S.mode===b.dataset.v);b.onclick=()=>{S.mode=b.dataset.v;ls.set('nl_pbm_mode',S.mode);renderSet()}});
+  $('c-prolist').innerHTML=[['bulb','Level 1–10',1],['clock','Duty cycle',1],['edit','สร้าง / แก้โปรแกรม',1],['brain','Helmet spec',1]].map(([i,t])=>`<span class="${pro?'on':''}">${icon(i,16)}${t}</span>`).join('')+`<span class="note">${pro?'เปิดอยู่ · เห็นใน Quick Start และหน้าโปรแกรม':'Easy ล็อก Level 1 · duty ค่าเริ่มต้น'}</span>`;
+  $('c-speed').querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',S.speed===+b.dataset.v);b.onclick=()=>{S.speed=+b.dataset.v;renderSet()}});
+  $('c-pro').hidden=!pro;
+  [['c-wl','wl',600,1100],['c-irr','irr',1,200],['c-duty','duty',10,90],['c-daymax','daymax',5,120]].forEach(([id,k,mn,mx])=>{const el=$(id);el.value=S.spec[k];el.onchange=()=>{let v=Math.round(+el.value);if(!isFinite(v))v=S.spec[k];if(k==='duty')v=Math.round(v/10)*10;v=clamp(v,mn,mx);el.value=v;S.spec[k]=v;ls.set('nl_pbm_spec',S.spec);$('c-saved').textContent='บันทึกแล้ว ✓';setTimeout(()=>{const n=$('c-saved');if(n)n.textContent='ใช้คำนวณปริมาณแสง (J/cm²) และส่งให้หมวก'},1500)}});
+  $('c-proto').innerHTML=`<div class="plog mono" style="white-space:pre-wrap">// แอป → หมวก (BLE) ส่งครั้งเดียวต่อขั้น หมวกจับเวลาเอง
+{"cmd":"step","i":3,"mask":"0x7FFFF","mode":"sweep","f1":24,"f2":35,"df":1,"dt":55,"duty":${S.spec.duty},"pat":"sync","dur":660}
+{"cmd":"pwr","v":[100,100,…19 ค่า]}
+{"cmd":"pause"} {"cmd":"resume"} {"cmd":"gain","v":0.9} {"cmd":"stop"}
+// pat: แอปส่ง sync เสมอ · เฟิร์มแวร์รองรับ alt (ซีกขวาเลื่อนเฟส 180°) และ wave (เลื่อนเฟสตามแถวหน้า→หลัง) สำหรับงานวิจัยภายในเท่านั้น
+// หมวก → แอป ทุก 1–2 วินาที {"st":"run","i":3,"f":27,"batt":81}</div><span class="note">mask = บิต 0–18 เรียงตาม ${PTS.join(' ')} · BLE หลุดเกิน 3 วินาที หมวกดับแสงเอง</span>`;
+  $('c-refs').innerHTML=`<ul class="interp" style="font-size:12px"><li>iMediSync. PBM Protocol Guide (iSyncWave)</li><li>Gracefire Guide to Neuromodulation: Vielight NeuroPro 2</li><li>Hamblin MR (2016). <i>BBA Clinical</i> 6:113–124.</li><li>Salehpour F, et al. (2018). <i>Mol Neurobiol</i> 55:6601–6636.</li><li>Zomorrodi R, et al. (2019). <i>Sci Rep</i> 9:6309.</li></ul>`;paintIcons($('v-set'))}
+
+
+
+/* ---------- steppers ---------- */
+function stepperHTML(v,unit){return `<span class="stp"><button data-d="-1" aria-label="ลด">−</button><b>${v}</b><span>${unit}</span><button data-d="1" aria-label="เพิ่ม">+</button></span>`}
+function bindStepper(root,v,mn,mx,cb,step=1){root.querySelectorAll('.stp [data-d]').forEach(b=>{let t=null,iv=null;const fire=()=>{v=clamp(+(v+(+b.dataset.d)*step).toFixed(1),mn,mx);cb(v)};
+  b.onclick=fire;b.onpointerdown=()=>{t=setTimeout(()=>{iv=setInterval(()=>{v=clamp(+(v+(+b.dataset.d)*step).toFixed(1),mn,mx);root.querySelector('.stp b').textContent=v},90)},450)};b.onpointerup=b.onpointerleave=()=>{clearTimeout(t);if(iv){clearInterval(iv);iv=null;cb(v)}}})}
+
+/* ---------- quick start: set it yourself, no program building ---------- */
+const QA={whole:['Whole head',PTS],front:['Front',REG.frontal[1]],center:['Center',['C3','Cz','C4','Fz','Pz']],back:['Back',['T5','P3','Pz','P4','T6','O1','O2']],left:['Left',REG.left[1]],right:['Right',REG.right[1]]};
+const QB=[['Delta',2],['Theta',6],['Alpha',10],['SMR',14],['Beta',18],['Gamma',40]];
+const QSW=[['Alpha 8–12',8,12],['LoBeta 12–15',12,15],['Beta 24–35',24,35],['Gamma 40–51',40,51],['Broad 1–45',1,45]];
+const QS=Object.assign({mode:'fixed',f:10,f1:8,f2:12,min:10,pts:PTS,pat:'sync',duty:0},ls.get('nl_pbm_quick',{}));if(!Array.isArray(QS.pts))QS.pts=[...PTS];
+const qnum=(v,d)=>{v=Number(v);return isFinite(v)?clamp(v,1,FMAX):d};function qfix(){QS.f=qnum(QS.f,10);QS.f1=Math.round(qnum(QS.f1,8));QS.f2=Math.round(qnum(QS.f2,12));QS.min=Math.round(clamp(Number(QS.min)||10,1,60));if(QS.mode!=='sweep')QS.mode='fixed';if(!PAT[QS.pat])QS.pat='sync';QS.duty=QS.duty?clamp(Math.round(QS.duty/10)*10,10,90):0;QS.pts=QS.pts.filter(x=>PTS.includes(x))}qfix();
+const bandName=f=>f<4?'Delta':f<8?'Theta':f<12?'Alpha':f<15?'SMR':f<30?'Beta':'Gamma';
+const f2v=f=>Math.round(Math.log10(f)/2*1000),v2f=v=>{const f=Math.pow(10,v/1000*2);return f<10?Math.round(f*2)/2:Math.round(f)};
+function renderQuick(){const L=lvlNow(),cl=getCL(),sel=new Set(QS.pts);
+  $('q-map').innerHTML=headPBM({on:litOf(QS.pts),sel,click:true,size:240});$('q-cnt').innerHTML=`<b>${QS.pts.length}</b>/19 points`;
+  $('q-reg').innerHTML=regHTML(sel);$('q-rg').ontoggle=()=>{REG_OPEN=$('q-rg').open};$('q-reg').querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{const pts=RGUIDE[+b.dataset.rg][2];QS.pts=PTS.filter(p=>pts.includes(p));saveQ()});
+  $('q-map').querySelectorAll('[data-pt]').forEach(c=>c.onclick=()=>{const n=c.dataset.pt;QS.pts=QS.pts.includes(n)?QS.pts.filter(x=>x!==n):PTS.filter(x=>x===n||QS.pts.includes(x));saveQ()});
+  $('q-mode').querySelectorAll('button').forEach(b=>{b.classList.toggle('on',QS.mode===b.dataset.v);b.onclick=()=>{QS.mode=b.dataset.v;saveQ()}});
+  if(QS.mode==='fixed'){$('q-freq').innerHTML=`<div class="qf"><button class="qf-b" data-d="-1" aria-label="ลด">−</button><div class="qf-v"><b>${QS.f}</b><span>Hz · ${bandName(QS.f)}</span></div><button class="qf-b" data-d="1" aria-label="เพิ่ม">+</button></div>
+      <input type="range" class="qslide" id="q-slide" min="0" max="1000" value="${f2v(QS.f)}" aria-label="ความถี่"><div class="qscale"><span>1</span><span>4</span><span>8</span><span>13</span><span>30</span><span>100 Hz</span></div>
+      <div class="qbands">${QB.map(([l,f])=>`<button data-f="${f}" class="${QS.f===f?'on':''}" style="--bc:${bandCol(f)}"><i></i>${l}<em>${f}</em></button>`).join('')}</div>`;
+    $('q-freq').querySelectorAll('.qf-b').forEach(b=>b.onclick=()=>{const st=QS.f<10?.5:1;QS.f=clamp(+(QS.f+(+b.dataset.d)*st).toFixed(1),1,FMAX);saveQ()});
+    $('q-slide').oninput=()=>{const f=v2f(+$('q-slide').value);$('q-freq').querySelector('.qf-v b').textContent=f;$('q-freq').querySelector('.qf-v span').textContent=`Hz · ${bandName(f)}`};$('q-slide').onchange=()=>{QS.f=v2f(+$('q-slide').value);saveQ()}}
+  else{const n=Math.abs(QS.f2-QS.f1)+1;$('q-freq').innerHTML=`<div class="qsw"><div><span>From</span><div id="q-f1">${stepperHTML(QS.f1,'Hz')}</div></div><svg viewBox="0 0 40 16" width="40"><path d="M2 8h34M30 3l6 5-6 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div><span>To</span><div id="q-f2">${stepperHTML(QS.f2,'Hz')}</div></div></div>
+      <div class="qsw-bar"><i style="left:${f2v(Math.min(QS.f1,QS.f2))/10}%;right:${100-f2v(Math.max(QS.f1,QS.f2))/10}%"></i></div>
+      <div class="qbands qsw2">${QSW.map(([l,a,b])=>`<button data-sw="${a},${b}" class="${QS.f1===a&&QS.f2===b?'on':''}" style="--bc:${bandCol(a)}"><i></i>${l.split(' ')[0]}<em>${a}–${b}</em></button>`).join('')}</div>
+      <div class="qnote">${sweepKind({f1:QS.f1,f2:QS.f2})} · ขยับทีละ 1 Hz · ค้างขั้นละ ${(QS.min*60/n).toFixed(1)} วินาที</div>`;
+    bindStepper($('q-f1'),QS.f1,1,Math.min(FMAX,QS.f2-1),v=>{QS.f1=v;saveQ()});bindStepper($('q-f2'),QS.f2,Math.max(1,QS.f1+1),FMAX,v=>{QS.f2=v;saveQ()})}
+  $('q-freq').insertAdjacentHTML('beforeend',guideHTML(QS.mode==='sweep'?[Math.min(QS.f1,QS.f2),Math.max(QS.f1,QS.f2)]:[QS.f,QS.f]));$('q-guide').ontoggle=()=>{GUIDE_OPEN=$('q-guide').open};
+  $('q-freq').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{QS.f=+b.dataset.f;saveQ()});$('q-freq').querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{const [a,c]=b.dataset.sw.split(',').map(Number);QS.f1=a;QS.f2=c;saveQ()});
+  $('q-dur').innerHTML=stepperHTML(QS.min,'min');bindStepper($('q-dur'),QS.min,1,60,v=>{QS.min=v;saveQ()});
+  const pro=S.mode==='pro';$('q-duty-row').hidden=!pro;
+  if(pro){    $('q-duty').innerHTML=stepperHTML(QS.duty||S.spec.duty,'%');bindStepper($('q-duty'),QS.duty||S.spec.duty,10,90,v=>{QS.duty=v;saveQ()},10)}
+  $('q-lvl').innerHTML=lvlHTML(L);if(S.mode==='pro')bindStepper($('q-lvl'),L,1,10,v=>{setLvl(v);renderQuick()});clBtn($('q-cl'),cl,v=>clGate(v,renderQuick));
+  const ft=QS.mode==='sweep'?`${QS.f1}→${QS.f2} Hz`:`${QS.f} Hz`,ok=QS.pts.length>0;$('q-go').disabled=!ok;$('q-go').innerHTML=ok?`Start <span class="hmin">${ft} · ${Math.round(QS.min+(cl?clExtra([{dur:QS.min*60}])/60:0))} min</span>`:'เลือกจุดก่อน'}
+$('q-all').onclick=()=>{QS.pts=[...PTS];saveQ()};$('q-none').onclick=()=>{QS.pts=[];saveQ()};
+/* region guide (collapsed by default): tap a region to select its points */
+let REG_OPEN=false;
+const RGUIDE=[['Frontal','#8A5BC0',['Fp1','Fp2','F7','F3','Fz','F4','F8'],'Executive function, decision making, inhibition, working memory'],
+  ['Midline','#5E86C9',['Fz','Cz','Pz'],'Cognitive flexibility, processing speed, complex attention'],
+  ['Central','#3F7FD0',['C3','Cz','C4'],'Planning and control of balance and voluntary movement'],
+  ['Temporal','#6FA85A',['T3','T4','T5','T6'],'Auditory processing, memory, speech, language, emotion'],
+  ['Parietal','#E8833A',['P3','Pz','P4'],'Sensory integration, vigilance, calculation, self-awareness'],
+  ['Limbic','#E0708A',['Fp1','Fp2','O1','O2'],'Autonomic regulation, motivation, social-emotional processing'],
+  ['Occipital','#D2455B',['O1','O2'],'Visual processing, spatial orientation, memory encoding']];
+function regHTML(sel){return `<details class="bguide rguide" id="q-rg" ${REG_OPEN?'open':''}><summary><span>Region guide</span><span class="bg-mini">${RGUIDE.map(r=>`<i style="background:${r[1]}"></i>`).join('')}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+  <div class="bg-list">${RGUIDE.map(([n,c,pts,d],i)=>{const k=pts.filter(p=>sel.has(p)).length,exact=k===pts.length&&sel.size===pts.length;return `<button class="bg-row rg ${exact?'on':k?'part':''}" data-rg="${i}" style="--gc:${c}"><i></i><div><b>${n}</b><span class="mono">${pts.join(' ')}</span><p>${d}</p></div><em class="mono">${k}/${pts.length}</em></button>`}).join('')}</div><p class="bg-note">แตะเพื่อเลือกจุดของบริเวณนั้น · General associations · not a medical claim</p></details>`}
+/* band guide (collapsed by default) */
+let GUIDE_OPEN=false;
+const GUIDE=[['HiGamma',55,85,'#8E3B8F','High-level processing, binding'],['Gamma',35,55,'#7A3FA0','Complex thinking, integration, networking'],
+  ['HiBeta',25,35,'#5B7FD1','Alert, high arousal'],['MidBeta',15,25,'#4FA36B','Engaged, externally oriented tasks'],['LoBeta · SMR',12,15,'#6FAE3A','Calm focus, inhibition'],
+  ['Alpha',8,12,'#E0A100','Aware, relaxed, present'],['Thalpha',6,9,'#E9846A','Creative, inward attention'],['Theta',4,7,'#E05A7A','Internally focused, day-dreaming'],['Delta',1,4,'#B33A5C','Deep rest, recovery, sleep']];
+function guideHTML([a,b]){return `<details class="bguide" id="q-guide" ${GUIDE_OPEN?'open':''}><summary><span>Band guide</span><span class="bg-mini">${GUIDE.slice().reverse().map(g=>`<i style="background:${g[3]}"></i>`).join('')}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+  <div class="bg-list">${GUIDE.map(([n,lo,hi,c,d])=>{const on=!(b<lo||a>hi);return `<div class="bg-row ${on?'on':''}" style="--gc:${c}"><i></i><div><b>${n}</b><span class="mono">${lo}–${hi} Hz</span><p>${d}</p></div></div>`}).join('')}</div><p class="bg-note">General associations · not a medical claim</p></details>`}
+function saveQ(){qfix();ls.set('nl_pbm_quick',QS);renderQuick()}
+const qx=()=>S.mode==='pro'&&QS.duty?{pat:'sync',duty:QS.duty}:{pat:'sync'};
+const quickProg=()=>{const ft=QS.mode==='sweep'?`${QS.f1}→${QS.f2} Hz`:`${QS.f} Hz`,an=areaName(QS.pts);return {id:'quick',src:'custom',cat:'custom',ic:'sun',name:`Quick · ${ft}`,goal:`${an} · ${ft}`,steps:[st(`${an} ${ft}`,[...QS.pts],QS.mode==='sweep'?{mode:'sweep',f1:QS.f1,f2:QS.f2,dur:QS.min*60,...qx()}:{f:QS.f,dur:QS.min*60,...qx()})]}};
+$('fab').onclick=()=>{go('quick');renderQuick()};
+$('q-go').onclick=()=>startRun([quickProg()],false);
+$('q-save').onclick=()=>{const p=quickProg();p.id='c-'+Date.now();p.name=p.goal;const c=customs();c.push(p);ls.set('nl_pbm_custom',c);S.cat='custom';go('home')};
+
+paintIcons();$('hw-head').innerHTML=headPBM({size:250});go('home');
+$('finder').onclick=()=>{if(window.parent!==window)parent.postMessage({bs:'tab',t:'E'},'*')};
+
+/* ---------- session-complete chime (shared) ---------- */
+function doneChime(){try{const A=window._dcA||(window._dcA=new (window.AudioContext||window.webkitAudioContext)());if(A.state==='suspended')A.resume();
+  const t0=A.currentTime+.05,out=A.createGain();out.gain.value=.22;out.connect(A.destination);
+  [[523.25,0],[659.25,.16],[783.99,.32],[1046.5,.5]].forEach(([f,d],i)=>{[1,2.01].forEach((m,j)=>{const o=A.createOscillator(),g=A.createGain(),t=t0+d,len=i===3?1.8:1.1;o.type='sine';o.frequency.value=f*m;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(j?.08:.32,t+.015);g.gain.exponentialRampToValueAtTime(.0004,t+len);o.connect(g).connect(out);o.start(t);o.stop(t+len+.05)})});
+  if(navigator.vibrate)navigator.vibrate([60,60,120])}catch(e){}}
+
+/* frequency wave under the Hz number: shows the rhythm's shape, moves slowly (no flashing) */
+function setWave(f){const el=$('r-wave');if(!el||!RUN)return;const n=f?Math.round(Math.max(2,Math.min(18,f/2.2))):0;if(RUN.wn===n)return;RUN.wn=n;if(!n){el.innerHTML='';return}
+  const W=300,H=26,pts=[];for(let i=0;i<=400;i++){const x=i/400*W*2;pts.push(`${i?'L':'M'}${x.toFixed(1)} ${(H/2-9*Math.sin(x/W*n*2*Math.PI)).toFixed(1)}`)}
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><g class="wv"><path d="${pts.join('')}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></g></svg>`}
+
+function runDk(){const t=document.documentElement.getAttribute('data-theme');return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)}
+
+/* ---------- shared headset check (from bs/hs.js) ---------- */
+/* ===== shared Headset check (BrainSTEM · Evaluate + Neurofeedback) ===== */
+const HS_POS={F3:[68,80],F4:[152,80],Fz:[110,66],Cz:[110,114],Pz:[110,158],GND:[110,38],Ref:[20,110]};
+const hsLv=z=>z==null?-1:z<10?0:z<20?1:2,HS_COL=['var(--ok)','var(--warn)','var(--danger)'];
+function hsHead(act,z){let g=`<path d="M100 24 110 8 120 24z" style="fill:var(--surface-2);stroke:var(--line)"/><ellipse cx="20" cy="110" rx="9" ry="17" style="fill:var(--surface-2);stroke:var(--line)"/><ellipse cx="200" cy="110" rx="9" ry="17" style="fill:var(--surface-2);stroke:var(--line)"/><circle cx="110" cy="106" r="84" style="fill:var(--surface-2);stroke:var(--line)" stroke-width="1.5"/>`;
+  Object.entries(HS_POS).forEach(([n,[x,y]])=>{const on=act.includes(n)||n==='GND'||n==='Ref',l=hsLv(z[n]),c=l<0?'var(--line)':HS_COL[l],sm=n==='GND'||n==='Ref';
+    if(!on){g+=`<circle cx="${x}" cy="${y}" r="11" style="fill:var(--surface);stroke:var(--line)" stroke-dasharray="2 2"/><text x="${x}" y="${y+3}" text-anchor="middle" style="fill:var(--muted);font-family:var(--f-mono);font-size:8.5px;opacity:.6">${n}</text>`;return}
+    g+=`${l>0?`<circle cx="${x}" cy="${y}" r="${sm?16:24}" style="fill:${c}" opacity=".18" class="hs-pl"/>`:''}<circle cx="${x}" cy="${y}" r="${sm?10:16}" style="fill:color-mix(in srgb,${c} 22%,var(--surface));stroke:${c}" stroke-width="2"/><text x="${x}" y="${y+3.5}" text-anchor="middle" style="fill:var(--ink);font-family:var(--f-mono);font-size:${sm?8:10}px;font-weight:600">${n==='Ref'?'A1':n}</text>`});
+  return `<svg viewBox="0 0 220 196" class="hs-head" role="img" aria-label="headset">${g}<text x="110" y="194" text-anchor="middle" style="fill:var(--muted);font-family:var(--f-mono);font-size:8px">Ref: A1 (ear) · GND: AFz</text></svg>`}
+/* o={act,z,title,sub,mains:{pct(0..1),txt,ok},fix:{n,msg,btn},btn:{id,txt,dis}} */
+function hsHTML(o){const els=[...o.act,'Ref','GND'],bad=els.filter(n=>hsLv(o.z[n])>0),ok=!bad.length&&o.mains.ok;
+  return `<div class="hsc"><div class="hs-top"><b>${o.title||'Headset check'}</b>${o.sub?`<span>${o.sub}</span>`:''}</div>${hsHead(o.act,o.z)}
+  <div class="hs-tiles" style="grid-template-columns:repeat(${els.length},1fr)">${els.map(n=>{const l=hsLv(o.z[n]);return `<span class="l${l}"><b>${n}</b><i>${o.z[n]!=null?o.z[n].toFixed(1):'—'}</i></span>`}).join('')}</div>
+  <div class="hs-m"><span>50 Hz</span><div class="bar"><u style="width:${Math.round(Math.min(1,Math.max(.04,o.mains.pct))*100)}%;background:${o.mains.ok?'var(--ok)':'var(--warn)'}"></u></div><span class="mono">${o.mains.txt}</span></div>
+  <div class="hs-st ${ok?'ok':'wait'}">${ok?'<b>✓</b><span>พร้อมแล้ว · ทุกขั้วต่ำกว่า 10 kΩ</span>':o.fix?`<b>!</b><span>${o.fix.msg}</span>${o.fix.btn?`<button class="hs-fx" data-n="${o.fix.n}">${o.fix.btn}</button>`:''}`:'<b>…</b><span>กำลังวัดค่าความต้านทาน รอให้ค่าลดลงต่ำกว่า 10 kΩ</span>'}</div>
+  <div class="hs-leg"><span><i style="background:var(--ok)"></i>&lt;10 kΩ</span><span><i style="background:var(--warn)"></i>10–20</span><span><i style="background:var(--danger)"></i>&gt;20</span></div></div>`}
+function hsFix(n,z,mainsOk){if(n==='hum'||!n)return mainsOk?null:{n:'hum',msg:'ไฟฟ้ารบกวน 50 Hz สูง · ถอดสายชาร์จ ห่างปลั๊กไฟ กดคลิปติ่งหู',btn:'แก้แล้ว'};
+  return {n,msg:`<b>${n}</b> ${z.toFixed(1)} kΩ · ${n==='Ref'?'หนีบคลิปติ่งหูให้แน่น':n==='GND'?'กดขั้วหน้าผากให้แนบ':'เลื่อนผมออก กดขั้วให้แนบหนังศีรษะ'}`,btn:'ปรับแล้ว'}}
+
+
+/* closed-loop needs clean EEG: impedance check before it can be switched on */
+const dayKey=d=>{const x=new Date(d);return x.getFullYear()+'-'+(x.getMonth()+1)+'-'+x.getDate()};
+function clGate(v,after){if(!v){setCL(false);after();return}pbmCheck(()=>{setCL(true);after()})}
+function pbmCheck(onOk){const key='nl_chk_'+curUser().id+'_'+dayKey(Date.now());let prev=null;try{prev=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
+  const act=['F3','F4','Fz','Cz','Pz'],els=[...act,'Ref','GND'],fresh=!!prev,C={z:{},tg:{},t:0,ok:0,raf:0};
+  els.forEach(n=>{C.z[n]=fresh?6+Math.random()*6:20+Math.random()*25;C.tg[n]=3.5+Math.random()*5});if(!fresh&&Math.random()<.35)C.tg[els[Math.floor(Math.random()*els.length)]]=24;
+  let hum=fresh?1:3.2,humT=Math.random()<.12?2.2:.8;
+  const ov=document.createElement('div');ov.className='hsov';ov.innerHTML=`<div class="hsov-t"><span class="lbl">EEG Closed-loop</span><button class="iconbtn" id="hk-x" aria-label="ปิด">✕</button></div><div id="hk-hs"></div><button class="btn pri" id="hk-go" disabled>กำลังเช็ค…</button><span class="note" style="text-align:center">Closed-loop ใช้ EEG ระหว่างพักเพื่อปรับแสง ต้องให้ทุกขั้วต่ำกว่า 10 kΩ ก่อน</span>`;
+  $('screen').appendChild(ov);const stop=()=>{cancelAnimationFrame(C.raf);ov.remove()};
+  $('hk-x').onclick=stop;
+  $('hk-go').onclick=()=>{const z={};els.forEach(n=>z[n]=+C.z[n].toFixed(1));try{localStorage.setItem(key,JSON.stringify({...(prev||{}),...z,date:new Date().toISOString()}))}catch(e){}stop();onOk()};
+  let last=performance.now(),rt=0;
+  const loop=now=>{if(!ov.isConnected)return;const dt=Math.min(.1,(now-last)/1000);last=now;C.t+=dt;rt+=dt;
+    els.forEach(n=>{C.z[n]+=(C.tg[n]-C.z[n])*Math.min(1,dt*(fresh?3:1.4))});hum+=(humT-hum)*Math.min(1,dt*1.5);
+    if(rt>.15){rt=0;const red=els.find(n=>C.z[n]>=20),amb=els.find(n=>C.z[n]>=10),mok=hum<1.5,ok=!amb&&mok;
+      const fix=red&&C.t>1.5?hsFix(red,C.z[red]):!mok&&C.t>1.5?hsFix(null,0,false):!ok?{msg:'กำลังวัดค่าความต้านทาน รอให้ต่ำกว่า 10 kΩ'}:null;
+      $('hk-hs').innerHTML=hsHTML({act,z:C.z,sub:'F3 · F4 · Fz · Cz · Pz + Ref + GND'+(fresh?' · เช็คแล้ววันนี้':''),mains:{pct:hum/4,txt:hum.toFixed(1)+' µV',ok:mok},fix});
+      $('hk-hs').querySelectorAll('.hs-fx').forEach(b=>b.onclick=()=>{const n=b.dataset.n;if(n==='hum')humT=.8;else C.tg[n]=3.5+Math.random()*4});
+      const bt=$('hk-go');bt.disabled=!ok;bt.textContent=ok?'สัญญาณดี · เปิด Closed-loop':'กำลังเช็ค…';
+      if(ok){C.ok+=.15;if(fresh&&C.ok>=.9){bt.click();return}}else C.ok=0}
+    C.raf=requestAnimationFrame(loop)};
+  C.raf=requestAnimationFrame(loop)}
+
+</script>
+
+<script>
+(function(){if(window.parent===window)return;
+var P=(window.BS_MOD?window.BS_MOD==='pbm':/pbm/.test(location.pathname))?'S':'T',root=document.documentElement;
+root.classList.add('bs-embed','bs-'+P);
+try{var th=parent.document.documentElement.getAttribute('data-theme');if(th)root.setAttribute('data-theme',th)}catch(e){}
+var css=':root{color-scheme:light dark}:root[data-theme="light"]{color-scheme:only light}:root[data-theme="dark"]{color-scheme:only dark}'+
+/* pillar accents on the module's own tokens */
+':root.bs-S{--coral:#D9533F;--th:#D9533F!important;--bsP:#D9533F;--navy:#C8452F}'+
+':root.bs-T{--th:#6E4FC0!important;--navy:#4A3696;--mint:#A08BEA;--bsP:#6E4FC0}'+
+'@media (prefers-color-scheme:dark){:root.bs-S:not([data-theme="light"]){--coral:#F07A68;--th:#F07A68!important;--bsP:#F07A68}:root.bs-T:not([data-theme="light"]){--th:#A08BEA!important;--navy:#1B1433;--mint:#A08BEA;--bsP:#A08BEA}}'+
+':root.bs-S[data-theme="dark"]{--coral:#F07A68;--th:#F07A68!important;--bsP:#F07A68}:root.bs-T[data-theme="dark"]{--th:#A08BEA!important;--navy:#1B1433;--mint:#A08BEA;--bsP:#A08BEA}'+
+/* one profile switcher (in BrainSTEM), pillar badge in the title */
+'.bs-S .views{padding-bottom:96px}'+
+'.bs-embed #who,.bs-T .hello,.bs-T #hs,.bs-T #linkbar,.bs-T #h-hero,.bs-T #last-card{display:none!important}.bs-embed .hw{width:320px}.bs-embed .screen{--th:var(--bsP)!important}.bs-embed .fab{bottom:92px}'+
+'.bs-embed #apptitle{display:flex;align-items:center;gap:10px}'+
+'.bs-embed #apptitle::before{content:"'+P+'";width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--bsP);color:#fff;font-family:var(--f-display);font-size:17px;font-weight:500;flex:none}'+
+/* shared BrainSTEM tab bar */
+'.bs-tab{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:6px 10px 18px;background:var(--app-bg);border-top:1px solid var(--line)}'+
+'.bs-tab button{border:0;background:transparent;font:inherit;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 2px;cursor:pointer;border-radius:12px}'+
+'.bs-tab b{font-family:var(--f-display);font-size:19px;line-height:24px;font-weight:500;width:28px;text-align:center;border-radius:9px}'+
+'.bs-tab svg{width:22px;height:22px;margin:1px 0}.bs-tab em{font-style:normal;font-size:10.5px}'+
+'.bs-tab .on{color:var(--ink)}.bs-tab .on em{font-weight:600}.bs-tab .on b{color:#fff!important;background:var(--bsP)}'+
+'.bs-tab [data-t=S] b{color:#E8604F}.bs-tab [data-t=T] b{color:#8C6FE0}.bs-tab [data-t=E] b{color:#4F86D6}.bs-tab [data-t=M] b{color:#2BA394}'+
+'.bs-tab button:focus-visible{outline:2px solid var(--bsP)}'+'#apptitle.bsw{cursor:pointer;font-family:var(--f-display);font-weight:500}#apptitle.bsw::before{display:none!important}#apptitle.bsw b{font-weight:600}#apptitle.bsw b.dim{color:var(--muted)!important;opacity:.45}#apptitle.bsw .ws{color:#E8604F}#apptitle.bsw .wt{color:#8C6FE0}#apptitle.bsw .we{color:#4F86D6}#apptitle.bsw .wm2{color:#2BA394}#apptitle.bsw small{font-size:13px;font-weight:500;color:var(--muted);margin-left:8px;font-family:inherit}'+
+'@media (max-width:560px){.bs-tab{position:fixed;left:0;right:0;bottom:0;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5}body.bs-pad{padding-bottom:96px}}';
+var st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
+var T=[['S','Stimulate'],['T','Train'],['E','Evaluate'],['M','Map']];
+var bar=document.createElement('nav');bar.className='bs-tab';bar.setAttribute('aria-label','BrainSTEM');
+bar.innerHTML=T.map(function(x){return '<button data-t="'+x[0]+'" class="'+(x[0]===P?'on':'')+'">'+(x[0]==='home'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>':'<b>'+x[0]+'</b>')+'<em>'+x[1]+'</em></button>'}).join('');
+bar.addEventListener('click',function(e){var b=e.target.closest('button');if(b)parent.postMessage({bs:'tab',t:b.dataset.t},'*')});
+var sc=document.querySelector('.screen');if(sc){sc.appendChild(bar)}else document.body.appendChild(bar);
+document.body.classList.add('bs-pad');
+/* one clock with BrainSTEM */
+var st0=document.querySelector('.status');var ck=st0&&st0.firstElementChild;function tick(){try{var c=parent.document.getElementById('clock');if(ck&&c)ck.textContent=c.textContent}catch(e){}}tick();setInterval(tick,5000);
+/* deep links from BrainSTEM home: #quick or #prog=<id> */
+var h=window.BS_HASH||location.hash.slice(1);setTimeout(function(){try{if(h==='quick'){var f=document.getElementById('fab');f&&f.click()}else if(h.indexOf('prog=')===0&&typeof openProg==='function')openProg(decodeURIComponent(h.slice(5)));else if(h.indexOf('proto=')===0&&typeof openProto==='function')openProto(h.slice(6));else if(h==='check'&&typeof openCheck==='function')openCheck(false);else if(h==='dev'&&typeof openDev==='function')openDev()}catch(e){}},60);
+/* hide the tab bar while a session is running, like BrainSTEM does */
+var BUSY=['#run','#stage','#v-live','#v-check','#v-run','#v-break','#tr-play'];
+var at=document.getElementById('apptitle'),HN=P==='S'?'PBM':'Neurofeedback';if(at)at.addEventListener('click',function(){if(at.classList.contains('bsw'))parent.postMessage({bs:'tab',t:'home'},'*')});
+function wmk(){if(!at)return;var hv=document.getElementById('v-home'),home=hv&&!hv.hidden;if(home&&!at.classList.contains('bsw')){at.classList.add('bsw');at.innerHTML='<span style="letter-spacing:-.01em">Brain'+[['S','ws'],['T','wt'],['E','we'],['M','wm2']].map(function(x){return '<b class="'+x[1]+(x[0]===P?'':' dim')+'">'+x[0]+'</b>'}).join('')+'</span><small style="margin-left:-2px">'+HN+'</small>'}else if(!home&&at.classList.contains('bsw')&&!at.querySelector('b'))at.classList.remove('bsw');else if(!home&&at.classList.contains('bsw'))at.classList.remove('bsw')}
+wmk();setInterval(wmk,250);
+setInterval(function(){var busy=BUSY.some(function(s){var el=document.querySelector(s);return el&&!el.hidden&&el.offsetParent!==null});bar.hidden=busy},300);})();
+</script>
