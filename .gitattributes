@@ -1,4 +1,6 @@
 * text=auto
+*.txt text eol=lf
+*.html text eol=lf
 .gitignore text eol=lf
 .gitattributes text eol=lf
 *.properties text eol=lf
