@@ -110,7 +110,7 @@ class StimulateFlowTest {
         rule.onNodeWithText("Fixed", useUnmergedTree = true).performClick()
         rule.runOnIdle { state.quickMinutes = 1 }
         rule.onNodeWithText("Start  10 Hz · 1 min").performClick()
-        rule.onNodeWithText("Pause").performClick()
+        rule.onNodeWithText("Pause").assertIsDisplayed().performClick()
         var pausedAt = 0.0
         rule.runOnIdle {
             assertTrue(state.engine!!.paused)
@@ -119,7 +119,8 @@ class StimulateFlowTest {
         Thread.sleep(500)
         rule.runOnIdle { assertEquals(pausedAt, state.engine!!.elapsed, 0.0) }
         snapshot("07-running-paused")
-        rule.onNodeWithText("Resume").performClick()
+        rule.onNodeWithText("Resume").assertIsDisplayed().performClick()
+        rule.runOnIdle { assertFalse(state.engine!!.paused) }
         rule.waitUntil(15000) { state.engine == null }
         rule.onNodeWithText("Session Complete").assertIsDisplayed()
         rule.runOnIdle {
@@ -235,7 +236,8 @@ class StimulateFlowTest {
         }
         rule.onNodeWithText("หลับตา").assertIsDisplayed()
         snapshot("14-closed-loop-baseline")
-        rule.onNodeWithText("Resume").performClick()
+        rule.onNodeWithText("Resume").assertIsDisplayed().performClick()
+        rule.runOnIdle { assertFalse(state.engine!!.paused) }
         rule.waitUntil(15000) { state.engine == null }
         rule.runOnIdle {
             val last = state.history.last()

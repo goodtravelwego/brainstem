@@ -31,6 +31,7 @@ The machine-readable result is in [reference-data-audit.json](reference-data-aud
 | Program options | All cards used the same 24 dp radius | Program options now use the source's 18 dp radius, padding, and gap |
 | Account styling | Account screens reused Stimulate's coral action color and dimmed module wordmark | Restored the shared account blue, full-color wordmark, compact native inputs, and lighter guest action |
 | Simulated battery | Session drain truncated elapsed five-minute units | Uses the reference's nearest-unit rounding with a minimum drain of one |
+| Small-screen session controls | EEG measurement content placed Resume/Stop below the visible area on a 320×640 display | Controls stay in a fixed bottom row; only session content scrolls. The EEG chart now uses the source's 640:300 aspect ratio and the head scales to 70% of screen width |
 
 ## Verification
 

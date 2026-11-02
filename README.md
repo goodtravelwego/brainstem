@@ -52,6 +52,8 @@ Verified on 2 November 2026: debug APK build, nine unit tests, lint, and the And
 
 Fifteen emulator screenshots are in `docs/screenshots`. The test writes new screenshots to Gradle's additional-test-output directory, under `app/build/outputs/connected_android_test_additional_output`.
 
+The current captures use a compact 320×640 display. Session controls stay visible in a fixed bottom row while the content scrolls; the EEG scope scales with screen width. This layout is covered by explicit Pause/Resume visibility and state assertions.
+
 Run `powershell -ExecutionPolicy Bypass -File tools/package-android.ps1` to build/export the debug APK and Android Studio source ZIP. It exports reviewed tracked source files and excludes local configuration/caches. After an existing build, `-SkipBuild` only exports the artifacts.
 
 ## Source guide
