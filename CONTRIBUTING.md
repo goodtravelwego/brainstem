@@ -15,7 +15,7 @@ For a multi-contributor repository, configure GitHub branch protection to requir
 
 ## Build and validation
 
-Use Android Studio's bundled JDK, or JDK 17 or newer compatible with Gradle 9.4.1. Install Android SDK platform 37.0 and Build Tools 36.0.0. Keep Gradle, AGP, Kotlin, dependencies, and GitHub Actions pinned to reviewed versions.
+Use Android Studio's bundled JDK. The committed daemon criteria request Java 25; CI explicitly installs Temurin 25. Java/Kotlin bytecode targets Java 17. Install Android SDK platform 37.0 and Build Tools 36.0.0. Keep Gradle, AGP, Kotlin, dependencies, and GitHub Actions pinned to reviewed versions.
 
 ```powershell
 .\gradlew.bat :app:assembleDebug :app:testVerificationUnitTest :app:lintDebug :app:lintVerification

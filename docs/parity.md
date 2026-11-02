@@ -12,11 +12,12 @@ Reference: signed-in public web app, Stimulate module, inspected 2026-11-02. Nat
 | Custom builder | Step editing, point masks, frequency, power/duty, reorder, duplicate/delete/save | Emulator creation/editing flow |
 | Running session | Countdown, selected points, wave, pause/resume, stop, completion | Emulator pause/completion + engine unit tests |
 | Energy summary | Per-point J/cm², average/maximum, intensity and duration | Dose unit tests + emulator screenshot |
-| Closed-loop | Simulated check, baseline/measure/after plan, simulated EEG | Plan/dose unit tests; emulator checks impedance fix and enabling/disabling; UI is simulation |
+| Closed-loop | Source response/noise model, light-off sampling, baseline/after averages, stress-triggered level reduction | Plan/dose and seeded replay tests; complete emulator session and EEG summary |
 | History | Thai month calendar, daily records, monthly totals, Repeat | Emulator flow + persistence |
 | Settings | Easy/Pro, speed, helmet values, theme, profiles/account | Build + emulator screenshots |
 | Native lifecycle | Retains ViewModel during rotation; saves on background, restores paused | Implemented; process-death/device coverage remains limited |
 | Login | Existing Supabase email endpoints; browser OAuth with PKCE | Compiled; real account flow requires user verification |
+| Profiles | Full native form, birth/age, guardian details, consent, camera/gallery, local/cloud save | Local validation/edit/persistence emulator flow; cloud and image providers need real-account/device verification |
 
 ## Scope changes
 
@@ -24,8 +25,9 @@ Reference: signed-in public web app, Stimulate module, inspected 2026-11-02. Nat
 - The 7-day strip leads to Stimulate History, keeping history available without Map.
 - IAPF is not measured or fetched from an excluded Evaluate module. Default preset frequencies are used.
 - Native status/navigation bars and adaptive screen sizing replace the website's phone mockup.
-- The impedance-check model now follows the reference's ranges, obstruction/noise probabilities, corrections, and same-day caching. The EEG response model remains a deterministic approximation. These values are not measurements.
-- Android-local profile addition is supported; full profile cloud editing/photos and clinic remote-management are outside this build.
+- The impedance and EEG response/noise models follow the reference's formulas. Fixed simulation increments and a persisted random seed support consistent session restoration. Random values differ between sessions and platforms. These values are not measurements.
+- Profile creation/editing/photos are implemented. Clinic remote-management remains outside this build.
+- Confirmation/reset email links use the existing website; users return to Android to sign in afterward. A direct native handoff needs backend-owner configuration.
 - Local Android records are not the same browser-local records used by the website. No migration or cloud activity sync is claimed.
 
 ## Integrations that need external configuration

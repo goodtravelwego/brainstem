@@ -24,6 +24,7 @@ On this computer `local.properties` already points to the installed SDK. On anot
 - Simulated headset impedance check; closed-loop baseline, stimulation blocks of at most 3 minutes, 45-second measurements, final 60-second measurement, and simulated EEG summary.
 - Per-profile local history, Thai calendar, daily/monthly totals, Repeat, persisted queue/custom programs/preferences, and interrupted-session restoration in a paused state.
 - Easy/Pro modes, ×20/real-time simulation, helmet specifications, light/dark/system themes, profile switching, and sign out.
+- Native onboarding/profile editing: real/nickname, birth date and age, sex, user group, handedness, guardian details, online consent, camera/gallery photos cropped to 128×128 JPEG, local persistence, and cloud profile/photo requests.
 
 ## Account setup and remaining integrations
 
@@ -31,9 +32,9 @@ The public Supabase URL and **publishable** key already exposed by the reference
 
 **Google sign-in requires the backend owner to allow `brainstem://auth/callback` under Supabase → Authentication → URL Configuration → Redirect URLs.** The app uses browser-based Google OAuth with PKCE and handles the callback. Until that URL is configured, Google may return to the website instead of Android. Existing website Google login does not automatically authorize a new Android redirect. Authentication was not tested with a real account/password.
 
-Password reset emails return to the existing website to complete the password change. Existing online profiles can be selected in Android. Added Android profiles are local; full cloud profile creation/editing, photos, clinic remote program assignments, and cross-device activity sync are not implemented. Session histories/custom programs remain local to this app installation; the website's browser storage is not imported.
+Confirmation/reset email links return to the existing website, whose redirect is already supported. After confirmation/reset, return to Android and sign in with the email/password; the native mail screen explains that handoff. Profile creation/editing uses the reference `app_profile` table and `profile-photos` bucket with the signed-in user's token. Real-account cloud operations, OAuth, and actual camera/gallery providers have not been exercised in automation. Clinic remote assignments and cross-device activity sync are not implemented. Session histories/custom programs remain local to this app installation; the website's browser storage is not imported.
 
-**Hardware remains a simulator, matching the reference prototype's default behavior.** No real BLE connection, measured EEG, or helmet control is claimed. A real device implementation needs the firmware's BLE service/characteristic UUIDs, transport framing, acknowledgement/disconnect rules, and telemetry schema. Real time changes the simulation clock; it does not connect hardware. EEG values are deterministic simulation values, not real readings.
+**Hardware remains a simulator, matching the reference prototype's default behavior.** No real BLE connection, measured EEG, or helmet control is claimed. The EEG model ports the source's randomized IAPF, frequency-dependent responses, rest decay, noise/stress spikes, light-off sampling, baseline/after averages, and high-beta intensity reduction. A persisted random seed and fixed simulation increments keep interrupted-session replay consistent across UI frame timings. Real time changes the simulation clock; it does not connect hardware.
 
 Evaluate-dependent alpha measurement is outside this project's scope. Presets use their reference default frequencies. The Alpha card is informational; the 7-day strip opens Stimulate history, since Map was excluded.
 
@@ -47,9 +48,11 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 .\gradlew.bat :app:connectedVerificationAndroidTest
 ```
 
-Verified on 2 November 2026: debug APK build passed; all seven unit tests passed; lint passed with 0 errors (21 non-blocking warnings); the Android 17/API 37 emulator smoke test passed. The unit tests cover dose, pause behavior, crossing step boundaries, closed-loop timing, sweep endpoints, duration scaling, and headset-check gating. The emulator test covers categories, favorite/queue, Quick Start selection/sweep, first/repeated headset checks, session pause/completion, history, descending builder sweeps, custom programs, Repeat regression, and dark mode. It never signs into a real account. Its separate verification application ID preserves the normal debug app's local data.
+Verified on 2 November 2026: debug APK build, nine unit tests, lint, and the Android 17/API 37 emulator flow. The tests cover dose, timing, pause, sweeps, scaling, headset checks, and seeded EEG replay. The device flow covers categories, favorite/queue, Quick Start, headset checks, pause/completion, history, builder, Repeat, dark mode, profile validation/edit/persistence, and a complete closed-loop session. It never signs into a real account. Its separate verification application ID preserves the normal debug app's local data.
 
-Twelve reviewed emulator screenshots are in `docs/screenshots`. The test writes new screenshots to Gradle's additional-test-output directory, under `app/build/outputs/connected_android_test_additional_output`.
+Fifteen emulator screenshots are in `docs/screenshots`. The test writes new screenshots to Gradle's additional-test-output directory, under `app/build/outputs/connected_android_test_additional_output`.
+
+Run `powershell -ExecutionPolicy Bypass -File tools/package-android.ps1` to build/export the debug APK and Android Studio source ZIP. It exports reviewed tracked source files and excludes local configuration/caches. After an existing build, `-SkipBuild` only exports the artifacts.
 
 ## Source guide
 
@@ -58,8 +61,13 @@ Twelve reviewed emulator screenshots are in `docs/screenshots`. The test writes 
 - `Auth.kt`: Supabase HTTP calls, PKCE, token encryption and refresh.
 - `AppState.kt`: profile-scoped state and app actions.
 - `Components.kt`: typography, palette, controls, icon paths, native head diagram.
-- `App.kt`, `ProgramScreens.kt`, `SessionScreens.kt`, `SettingsScreens.kt`: native screens.
+- `App.kt`, `ProgramScreens.kt`, `SessionScreens.kt`, `SettingsScreens.kt`, `ProfileScreens.kt`: native screens.
+- `CompletionChime.kt`: PCM synthesis of the reference's four-note completion sound.
 - `reference/pbm.html`: downloaded public PBM reference, retained for comparison only and never embedded in Android.
 - `tools/extract-reference.cjs`: extracts only static program data and public backend configuration from the downloaded reference.
 
 The bundled Mitr, IBM Plex Sans Thai, and IBM Plex Mono fonts are distributed under their included Open Font Licenses in `app/src/main/assets`.
+
+## Repository workflow
+
+The repository uses `main` plus feature branches, Conventional Commits, a PR template, a Gradle distribution checksum, and GitHub Actions pinned to full commit SHAs. CI builds the APK, runs unit tests/lint, and publishes reports/APK artifacts. Non-draft PRs also run device tests on API 35. Local SDK paths, credentials, IDE caches, signing material, and built APK/ZIP files are excluded. See [CONTRIBUTING.md](CONTRIBUTING.md).

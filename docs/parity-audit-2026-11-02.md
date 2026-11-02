@@ -33,21 +33,25 @@ The machine-readable result is in [reference-data-audit.json](reference-data-aud
 ## Verification
 
 - Debug APK build: **passed**.
-- Unit tests: **7 passed**, covering dose, step boundaries, pause, sweep endpoints, proportional duration, closed-loop timing, and the headset gate.
+- Unit tests: **9 passed**, covering dose, step boundaries, pause, sweeps, proportional duration, closed-loop timing, headset gating, seeded replay, and frequency-dependent light-off EEG sampling.
 - Android 17 / API 37 instrumentation flow: **passed**. It covers categories, favorites, queue, all/clear selection, sweep presets, first and repeated headset checks, pause/resume/completion, history, descending builder sweep, custom-program creation, Repeat regression, and dark mode.
-- Android lint: **0 errors**, 21 non-blocking warnings.
-- Twelve current screenshots: [screenshots](screenshots).
+- Android lint: **0 errors**; warnings include dependency updates, deprecated platform APIs, and small-screen layout advice.
+- Fifteen current screenshots: [screenshots](screenshots), including native profile editing, baseline measurement, and closed-loop summary.
 
 Instrumentation now uses `com.brainstem.stimulate.verification`, keeping the normal debug app's saved data separate. It does not log into or modify a real online account.
 
 ## Remaining differences and limits
 
-1. **Visuals and motion:** the native layout has not passed an automated pixel-difference comparison at identical logical dimensions. The inspected web phone had a 372×800 CSS-pixel screen; the emulator uses a different logical size and native system insets. Gradients, some borders, inline list evidence badges, head glow geometry, waveform motion, completion sound, and certain layout details still differ or need a matching-size review. Passing interaction tests is not proof of pixel-perfect output.
-2. **EEG simulation:** the source's randomized response/noise model has not been fully ported. Android still uses its earlier deterministic EEG response model. The impedance-check model was aligned in this pass, but simulated readings themselves will naturally vary. Neither the inspected website nor this build demonstrates a live helmet connection.
-3. **Account flow:** email endpoints compile, but real-account login/signup/reset was not exercised. Google needs `brainstem://auth/callback` allowlisted in Supabase. Password reset finishes on the website instead of a native reset screen.
-4. **Profiles:** Android retrieves existing cloud profiles; creating/editing cloud profiles, photos, and full original onboarding remain incomplete. New Android profiles are local.
+1. **Visuals and motion:** an automated pixel-difference comparison at identical logical dimensions has not been completed. The inspected web phone had a 372×800 CSS-pixel screen; the emulator uses a different logical size and native system insets. Inline evidence badges, elliptical clipped head glow, six-second masked frequency wave, input styling, and the four-note synthesized completion sound have now been aligned to the source. Some spacing, gradients, scope animation, profile sheet presentation, date/camera controls, and native system rendering still need matching-size visual review. Passing interaction tests is not proof of pixel-perfect output.
+2. **EEG simulation:** the source's randomized IAPF/response targets, rest, noise/stress spikes, light-off sampling, baseline/after means, and intensity reduction are now ported. Android uses fixed 100 ms simulation increments and a persisted seed so restoration is reproducible. Random streams and frame timing are platform-specific; numerical readings are not expected to match a separate web session. Neither the inspected website nor this build demonstrates a live helmet connection.
+3. **Account flow:** email endpoints compile, but real-account login/signup/reset was not exercised. Google needs `brainstem://auth/callback` allowlisted by the Supabase owner. The user has no backend administration access. Confirmation/reset email links deliberately use the existing approved website, followed by email/password login in Android; direct native email return is not available without owner configuration.
+4. **Profiles:** native onboarding/add/edit forms, validation, all demographic/guardian fields, camera/gallery/removal controls, 128×128 JPEG conversion, online consent, cloud create/update, authenticated photo download/upload/removal, and local fallback on photo failure are implemented. Local validation/edit/persistence passed on the emulator. Real-account cloud writes and actual camera/gallery providers remain unverified. The profile UI uses Android's date picker and image-provider intents.
 5. **Shared/excluded modules:** Evaluate-dependent IAPF, clinic assignments managed through the original shared shell, and their related data paths are not reproduced. The original activity records are browser-local; they are not automatically the Android installation's records.
 
 The requested menu removal, direct opening of Stimulate, native system bars, and routing the seven-day strip to Stimulate History are deliberate scope changes rather than accidental omissions.
 
 Do not describe this build as a complete 1:1 copy based on these checks. The verified statement is: **exact preset data, tested main Stimulate flows, and the corrections above; remaining differences explicitly listed.**
+
+## Git delivery
+
+The previously empty private repository now has a `main` baseline and a feature branch, focused Conventional Commits, ignored local/build/credential files, explicit line endings, contribution guidelines, a PR template, a verified Gradle distribution checksum, and CI actions pinned to full SHAs. CI runs builds/unit tests/lint and publishes APK/reports; non-draft PRs also run an isolated API 35 device test. The first SDK setup failure was corrected by installing `platform-tools` rather than the retired `tools` package. Java 25 matches the committed daemon criteria. No shared history was rewritten.
