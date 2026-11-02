@@ -472,16 +472,22 @@ fun Timeline(steps: List<Step>, selected: Int = -1, modifier: Modifier = Modifie
 }
 
 @Composable
-fun Wordmark(size: Int = 20) {
+fun Wordmark(size: Int = 20, activeModule: Boolean = true) {
     val p = C
     Text(
         buildAnnotatedString {
             append("Brain")
             listOf(
-                    "S" to p.accent,
-                    "T" to p.muted.copy(alpha = .5f),
-                    "E" to p.muted.copy(alpha = .5f),
-                    "M" to p.muted.copy(alpha = .5f),
+                    "S" to if (p.bg == Dark.bg) Dark.accent else Light.accent,
+                    "T" to
+                        if (activeModule) p.muted.copy(alpha = .45f)
+                        else Color(if (p.bg == Dark.bg) 0xFFA08BEA else 0xFF6E4FC0),
+                    "E" to
+                        if (activeModule) p.muted.copy(alpha = .45f)
+                        else Color(if (p.bg == Dark.bg) 0xFF6FA0E8 else 0xFF2F64AD),
+                    "M" to
+                        if (activeModule) p.muted.copy(alpha = .45f)
+                        else Color(if (p.bg == Dark.bg) 0xFF4DBFA6 else 0xFF1F8277),
                 )
                 .forEach { (s, c) ->
                     withStyle(SpanStyle(color = c, fontWeight = FontWeight.SemiBold)) { append(s) }

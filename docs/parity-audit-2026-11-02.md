@@ -29,6 +29,8 @@ The machine-readable result is in [reference-data-audit.json](reference-data-aud
 | Primary actions | Uniform body text differed from display-font button labels and smaller subtitles | Corrected action typography, secondary text, Quick Start action-bar padding, and Save sizing |
 | Session overview | Seven-day active count was absent; title was too small; recent-session choices were vertical | Restored active-day count, 17 sp session title, and horizontally scrolling Repeat choices |
 | Program options | All cards used the same 24 dp radius | Program options now use the source's 18 dp radius, padding, and gap |
+| Account styling | Account screens reused Stimulate's coral action color and dimmed module wordmark | Restored the shared account blue, full-color wordmark, compact native inputs, and lighter guest action |
+| Simulated battery | Session drain truncated elapsed five-minute units | Uses the reference's nearest-unit rounding with a minimum drain of one |
 
 ## Verification
 

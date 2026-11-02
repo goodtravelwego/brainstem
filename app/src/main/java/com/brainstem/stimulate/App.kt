@@ -42,11 +42,18 @@ fun BrainApp(a: AppState) {
     }
     Box(Modifier.fillMaxSize().background(p.bg).windowInsetsPadding(WindowInsets.safeDrawing)) {
         if (!a.loggedIn)
-            LoginScreen(a) {
-                runCatching {
-                        CustomTabsIntent.Builder().build().launchUrl(context, a.auth.googleUrl())
-                    }
-                    .onFailure { a.error = it.message.orEmpty() }
+            CompositionLocalProvider(
+                LocalPalette provides
+                    p.copy(accent = Color(if (p.bg == Dark.bg) 0xFF4F86D6 else 0xFF2F64AD))
+            ) {
+                LoginScreen(a) {
+                    runCatching {
+                            CustomTabsIntent.Builder()
+                                .build()
+                                .launchUrl(context, a.auth.googleUrl())
+                        }
+                        .onFailure { a.error = it.message.orEmpty() }
+                }
             }
         else if (a.engine != null) RunScreen(a)
         else
@@ -66,7 +73,13 @@ fun BrainApp(a: AppState) {
             }
         if (a.checkOpen) HeadsetCheck(a)
         if (a.profileOpen && !a.profileFormOpen) ProfileDialog(a)
-        if (a.profileFormOpen) ProfileForm(a)
+        if (a.profileFormOpen)
+            CompositionLocalProvider(
+                LocalPalette provides
+                    p.copy(accent = Color(if (p.bg == Dark.bg) 0xFF4F86D6 else 0xFF2F64AD))
+            ) {
+                ProfileForm(a)
+            }
         if (a.message.isNotBlank())
             AlertDialog(
                 onDismissRequest = { a.message = "" },
@@ -157,7 +170,7 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(26.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Wordmark(29)
+            Wordmark(30, activeModule = false)
             Spacer(Modifier.height(20.dp))
             Label("✓", size = 40, color = C.ok)
             Title("เช็คอีเมล", size = 26)
@@ -185,8 +198,14 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Wordmark(29)
-        Title(if (signup) "สร้างบัญชีใหม่" else "ยินดีต้อนรับ", size = 24)
+        Wordmark(30, activeModule = false)
+        Text(
+            if (signup) "สร้างบัญชีใหม่" else "ยินดีต้อนรับ",
+            fontFamily = DisplayFont,
+            fontSize = 24.sp,
+            lineHeight = 30.sp,
+            color = C.ink,
+        )
         Note(
             if (signup) "ใช้อีเมลของผู้ปกครองหรือของตัวเอง"
             else "เข้าสู่ระบบเพื่อเก็บข้อมูลไว้อย่างปลอดภัย ใช้ได้หลายเครื่อง"
@@ -205,7 +224,11 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Image(painterResource(R.drawable.ic_google), "Google", Modifier.size(20.dp))
-                Label(if (signup) "สมัครด้วย Google" else "เข้าสู่ระบบด้วย Google", size = 15)
+                Label(
+                    if (signup) "สมัครด้วย Google" else "เข้าสู่ระบบด้วย Google",
+                    size = 16,
+                    display = true,
+                )
             }
         }
         Row(
@@ -292,8 +315,12 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
                 Label(if (signup) "เข้าสู่ระบบ" else "สมัครสมาชิก", size = 13, color = C.accent)
             }
         }
-        Action("ใช้แบบไม่ล็อกอิน (เก็บในเครื่องนี้)", primary = false, enabled = !a.busy) {
-            a.guest()
+        TextButton(
+            onClick = { a.guest() },
+            enabled = !a.busy,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Label("ใช้แบบไม่ล็อกอิน (เก็บในเครื่องนี้)", size = 13, color = C.muted)
         }
     }
 }

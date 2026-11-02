@@ -147,7 +147,7 @@ fun ProfileForm(a: AppState) {
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (first) Wordmark(29)
+            if (first) Wordmark(30, activeModule = false)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Title(
                     if (first) "สร้างโปรไฟล์"

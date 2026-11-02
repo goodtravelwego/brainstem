@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -517,7 +518,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
             history.add(record)
             summary = record
             screen = Screen.SUMMARY
-            battery = (battery - maxOf(1, (r.elapsed / 300).toInt())).coerceAtLeast(5)
+            battery = (battery - maxOf(1, (r.elapsed / 300).roundToInt())).coerceAtLeast(5)
             if (complete && r.plan.fromQueue) queue.clear()
         }
         save()
