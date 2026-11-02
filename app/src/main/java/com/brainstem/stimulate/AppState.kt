@@ -99,7 +99,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
             j.optJSONArray("profiles")?.objects()?.map(::profileFrom)
                 ?: listOf(
                     Profile("P-001", "น้องต้นกล้า", 8),
-                    Profile("P-002", "คุณสมศรี (ตัวอย่าง)", 72),
+                    Profile("P-002", "คุณสมศรี (ตัวอย่าง)", 72, type = "care"),
                 )
         )
         currentProfile = j.optString("current", profiles.firstOrNull()?.id.orEmpty())
