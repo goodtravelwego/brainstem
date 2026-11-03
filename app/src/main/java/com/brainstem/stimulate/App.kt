@@ -245,11 +245,15 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
             HorizontalDivider(Modifier.weight(1f), color = C.line)
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Note("อีเมล")
+            Label("อีเมล", size = 16, weight = FontWeight.Medium)
             InputField(email, { email = it }, "", KeyboardType.Email)
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Note("รหัสผ่าน" + if (signup) " (อย่างน้อย 6 ตัว)" else "")
+            Label(
+                "รหัสผ่าน" + if (signup) " (อย่างน้อย 6 ตัว)" else "",
+                size = 16,
+                weight = FontWeight.Medium,
+            )
             BasicTextField(
                 password,
                 { password = it },
