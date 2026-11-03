@@ -74,4 +74,4 @@ The bundled Mitr, IBM Plex Sans Thai, and IBM Plex Mono fonts are distributed un
 
 ## Repository workflow
 
-The repository uses `main` plus feature branches, Conventional Commits, a PR template, a Gradle distribution checksum, and GitHub Actions pinned to full commit SHAs. CI builds the APK, runs unit tests/lint, and publishes reports/APK artifacts. Non-draft PRs also run device tests on API 35. Local SDK paths, credentials, IDE caches, signing material, and built APK/ZIP files are excluded. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Work directly on `main`, as requested by the repository owner, with focused Conventional Commits and relevant local checks before pushing. The repository includes an optional PR template, a Gradle distribution checksum, and GitHub Actions pinned to full commit SHAs. CI builds the APK, runs unit tests/lint, and publishes reports/APK artifacts in the background. API 35 device tests can also be run manually through GitHub Actions. Local SDK paths, credentials, IDE caches, signing material, and built APK/ZIP files are excluded. See [CONTRIBUTING.md](CONTRIBUTING.md).

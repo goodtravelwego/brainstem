@@ -4,14 +4,14 @@ This repository contains the native Kotlin / Jetpack Compose BrainSTEM Stimulate
 
 ## Git workflow
 
-1. Start from an up-to-date `main` and create a short-lived branch such as `feat/native-stimulate-parity`, `fix/session-timer`, or `docs/android-setup`.
+1. Work directly on `main`, as requested by the repository owner. Run `git pull --ff-only` before starting. Do not create additional branches unless explicitly requested.
 2. Keep commits focused and use Conventional Commits: `feat:`, `fix:`, `test:`, `docs:`, `ci:`, or `chore:`. Explain why a non-obvious behavior changed in the body.
 3. Stage explicit files and review `git diff --cached` and `git diff --cached --check` before committing. Do not commit unrelated changes or generated output.
-4. Push the branch and open a pull request. State the problem, resulting behavior, validation, screenshots for visible changes, and any remaining external configuration.
-5. Require passing CI before merge. Prefer squash merge for a single focused feature; preserve separate commits when they form useful reviewable units. Never force-push `main`, rewrite shared history, or merge failing checks.
-6. Use `git pull --ff-only` for routine updates. If conflicts occur, resolve them on the feature branch and rerun relevant checks. Do not discard another person's changes.
+4. Run relevant local checks before pushing `main`. Record resulting behavior, validation, screenshots for visible changes, and any remaining external configuration. A pull request is optional when explicitly requested.
+5. Keep CI enabled as background verification. Report failures accurately and fix relevant defects; do not wait for a hosted emulator between routine local UI iterations. Never force-push `main` or rewrite shared history.
+6. If an update cannot fast-forward, inspect and preserve both sets of changes, resolve conflicts, and rerun relevant checks. Do not discard another person's changes.
 
-For a multi-contributor repository, configure GitHub branch protection to require pull requests and the `Android checks` status check, with reviews appropriate to the team's size. Avoid rules that prevent the sole maintainer from completing routine work.
+Use local Gradle builds and the Android emulator for the normal feedback loop. Keep commits focused so each change remains reviewable and reversible on `main`.
 
 ## Build and validation
 
