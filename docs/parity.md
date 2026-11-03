@@ -22,6 +22,7 @@ Reference: signed-in public web app, Stimulate module, inspected 2026-11-02. Nat
 ## Scope changes
 
 - The bottom navigation bar is removed. The app opens directly to the Stimulate main screen after login; detail screens retain their back buttons. No Train, Evaluate, or Map routes exist.
+- Per the requested spacing trial, expanded program descriptions place the evidence badge on its own line, 6 dp below the text, instead of the reference's inline badge.
 - The 7-day strip leads to Stimulate History, keeping history available without Map.
 - IAPF is not measured or fetched from an excluded Evaluate module. Default preset frequencies are used.
 - Native status/navigation bars and adaptive screen sizing replace the website's phone mockup.

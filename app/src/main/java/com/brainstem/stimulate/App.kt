@@ -8,9 +8,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -19,13 +17,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
@@ -630,33 +626,13 @@ private fun ProgramRow(a: AppState, p: Program) {
 
 @Composable
 private fun ProgramDescription(goal: String, kind: String, evidence: String) {
-    val measurer = rememberTextMeasurer()
-    val badgeStyle = TextStyle(fontFamily = BodyFont, fontSize = 11.sp)
-    val badgeSize = measurer.measure(evidence, badgeStyle).size
-    val width = with(LocalDensity.current) { (badgeSize.width.toDp() + 24.dp).toSp() }
-    val text = buildAnnotatedString {
-        append(goal)
-        if (evidence.isNotEmpty()) appendInlineContent("evidence", " $evidence")
+    Column(Modifier.padding(top = 4.dp)) {
+        Text(goal, fontFamily = BodyFont, fontSize = 12.5.sp, lineHeight = 18.125.sp, color = C.ink)
+        if (evidence.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            EvidenceBadge(kind, evidence)
+        }
     }
-    Text(
-        text,
-        Modifier.padding(top = 4.dp),
-        fontFamily = BodyFont,
-        fontSize = 12.5.sp,
-        lineHeight = 18.125.sp,
-        color = C.ink,
-        inlineContent =
-            if (evidence.isEmpty()) emptyMap()
-            else
-                mapOf(
-                    "evidence" to
-                        InlineTextContent(
-                            Placeholder(width, 23.sp, PlaceholderVerticalAlign.TextCenter)
-                        ) {
-                            Box(Modifier.padding(start = 6.dp)) { EvidenceBadge(kind, evidence) }
-                        }
-                ),
-    )
 }
 
 @Composable

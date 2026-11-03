@@ -14,4 +14,6 @@ The review compares data, layout, controls, and behavior. Browser JPEG compressi
 
 Follow-up on 3 November: `reference-info-expanded.jpg` and `reference-builder-alpha-copy.jpg` record the two marked areas. Native captures `20-program-info-expanded.png` and `21-builder-alpha-copy.png` reproduce those states, including the filled info button and fully faded single-step delete button. The reference info capture includes an existing queue; compare the marked row itself rather than its absolute vertical position.
 
+The user subsequently requested a spacing trial for the evidence badge. Current native capture `20-program-info-expanded.png` puts it on its own line with 6 dp above it. The inline badge in `marked-controls-side-by-side.png` records the earlier reference-matching version and is superseded by this deliberate spacing change.
+
 The later Duplicate & Edit comment is recorded by native captures `22-program-actions.png` and `23-custom-program-actions.png` in `../screenshots`. The preset action spans the content width, includes the source copy icon and uses `.btn.sm` geometry. Custom actions use the matching edit/copy/trash icons and Delete color. The About panel's missing icon/caption/value columns above the action were corrected in the same pass.

@@ -61,7 +61,7 @@ After the 2 November comparison, the original reference was left in Easy mode wi
 
 Follow-up on **3 November 2026**, addressing the two marked browser comments:
 
-- Program info now has the reference's filled ink/white selected state. Description text uses ink, a 4 dp top margin, 12.5 sp / 1.45 typography, and an inline evidence badge. The test opens/closes it and verifies that the app remains on Home.
+- Program info now has the reference's filled ink/white selected state. Description text uses ink, a 4 dp top margin and 12.5 sp / 1.45 typography. The original inline evidence badge was subsequently moved to its own line with 6 dp above it at the user's request. The test opens/closes the description and verifies that the app remains on Home.
 - Builder up/down/copy/delete controls use the exact vector paths, 30×30 dp containers and 9 dp corners. Copy/delete icons are 15 dp; arrows are 16 dp. A disabled control fades as a whole to 30%, including its background. Delete is disabled for one step, enabled after duplication, and disabled again after deleting back to one step; device assertions cover those transitions.
 - The same pass corrected the builder's 130 dp mode selector and 38 dp / 22 sp fixed-frequency and duty controls. Compact duration controls distribute their available width, preserving the full button width.
 - The original browser draft, **Alpha Calm (copy)**, was preserved. A separate temporary reference tab was used to inspect info behavior, then closed.
