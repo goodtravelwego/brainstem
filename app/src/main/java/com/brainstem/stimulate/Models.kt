@@ -276,6 +276,22 @@ data class SessionRecord(
     val events: List<String> = emptyList(),
 )
 
+fun weeklyMinutes(
+    history: List<SessionRecord>,
+    today: java.time.LocalDate = java.time.LocalDate.now(),
+): List<Int> =
+    (6 downTo 0).map { offset ->
+        val day = today.minusDays(offset.toLong())
+        (history
+                .filter {
+                    java.time.Instant.ofEpochMilli(it.date)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate() == day
+                }
+                .sumOf { it.seconds } / 60.0)
+            .roundToInt()
+    }
+
 data class RunPlan(
     val programs: List<Program>,
     val steps: List<Step>,

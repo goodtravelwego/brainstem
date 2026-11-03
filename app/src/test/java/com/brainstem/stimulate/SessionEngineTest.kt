@@ -6,6 +6,38 @@ import org.junit.Test
 
 class SessionEngineTest {
     @Test
+    fun weekStripRoundsEachDayAndExcludesOutsideTheSevenDayWindow() {
+        val today = java.time.LocalDate.of(2026, 11, 2)
+        fun record(daysAgo: Long, seconds: Int) =
+            SessionRecord(
+                date =
+                    today
+                        .minusDays(daysAgo)
+                        .atStartOfDay(java.time.ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli(),
+                complete = false,
+                seconds = seconds,
+                level = 1,
+                items = emptyList(),
+                dose = emptyMap(),
+            )
+        val minutes =
+            weeklyMinutes(
+                listOf(
+                    record(0, 29),
+                    record(1, 29),
+                    record(2, 31),
+                    record(7, 600),
+                    record(-1, 600),
+                ),
+                today,
+            )
+        assertEquals(listOf(0, 0, 0, 0, 1, 0, 0), minutes)
+        assertEquals(1, minutes.sum())
+    }
+
+    @Test
     fun seededClosedLoopReplaySurvivesDifferentFrameSizes() {
         val plan =
             makePlan(

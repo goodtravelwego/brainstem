@@ -159,6 +159,22 @@ class Repository(context: Context) {
     val references = definitions.getJSONObject("references")
     val evidence = definitions.getJSONObject("evidence")
 
+    fun regionName(points: List<String>): String {
+        val regions = definitions.getJSONObject("regions")
+        val match =
+            regions
+                .keys()
+                .asSequence()
+                .map { regions.getJSONArray(it) }
+                .firstOrNull { it.getJSONArray(1).strings().toSet() == points.toSet() }
+        return match?.getString(0) ?: "${points.size} จุด"
+    }
+
+    fun regionCaption(points: List<String>): String {
+        val name = regionName(points)
+        return if ("จุด" in name) name else "$name · ${points.size} จุด"
+    }
+
     fun read(key: String) =
         runCatching { JSONObject(prefs.getString(key, "{}")!!) }.getOrDefault(JSONObject())
 

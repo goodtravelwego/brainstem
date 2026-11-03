@@ -45,7 +45,11 @@ private fun profilePhoto(bitmap: Bitmap): String {
 }
 
 @Composable
-fun ProfileAvatar(profile: Profile, modifier: Modifier = Modifier.size(40.dp)) {
+fun ProfileAvatar(
+    profile: Profile,
+    modifier: Modifier = Modifier.size(30.dp),
+    colorIndex: Int = 0,
+) {
     val image =
         remember(profile.photo) {
             runCatching {
@@ -56,7 +60,8 @@ fun ProfileAvatar(profile: Profile, modifier: Modifier = Modifier.size(40.dp)) {
                 .getOrNull()
         }
     val colors = listOf(0xFF2F64AD, 0xFFD9533F, 0xFF6E4FC0, 0xFF1F8277, 0xFFB07A10, 0xFFB5487A)
-    val color = Color(colors[if (profile.id == "new") colors.lastIndex else 0])
+    val color =
+        Color(colors[if (profile.id == "new") colors.lastIndex else colorIndex.mod(colors.size)])
     Box(modifier.clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
         if (image != null) Image(image, profile.name, Modifier.fillMaxSize())
         else

@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.semantics.*
@@ -24,19 +25,32 @@ fun QuickScreen(a: AppState) {
         Box(Modifier.weight(1f)) {
             ScreenColumn("quick") {
                 val s = a.quick
-                CardBox(padding = 14) {
+                CardBox(
+                    padding = 14,
+                    bottomPadding = 10,
+                    radius = 24,
+                    gap = 12,
+                    headGradient = true,
+                ) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Label("${s.pts.size}", size = 16, weight = FontWeight.SemiBold)
-                        Note("/19 points")
+                        Label(
+                            "${s.pts.size}",
+                            size = 20,
+                            display = true,
+                            weight = FontWeight.Medium,
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Label("/19 points", size = 13, color = C.muted)
                         Spacer(Modifier.weight(1f))
-                        Pill("All") {
-                            a.quick = s.copy(pts = POINTS)
-                            a.save()
-                        }
-                        Spacer(Modifier.width(6.dp))
-                        Pill("Clear") {
-                            a.quick = s.copy(pts = emptyList())
-                            a.save()
+                        Row(Modifier.clip(CircleShape).background(C.surface2).padding(3.dp)) {
+                            QuickSelection("All") {
+                                a.quick = s.copy(pts = POINTS)
+                                a.save()
+                            }
+                            QuickSelection("Clear") {
+                                a.quick = s.copy(pts = emptyList())
+                                a.save()
+                            }
                         }
                     }
                     HeadMap(s.pts, Modifier.align(Alignment.CenterHorizontally).width(240.dp)) { n
@@ -47,30 +61,38 @@ fun QuickScreen(a: AppState) {
                             )
                         a.save()
                     }
-                    Note("แตะจุดเพื่อเลือก / เอาออก", Modifier.align(Alignment.CenterHorizontally))
-                    HorizontalDivider(color = C.line)
-                    Expandable("Region guide", REGIONS.map { Color(it.color) }) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            REGIONS.forEach { r ->
-                                GuideRow(
-                                    r.name,
-                                    r.points.joinToString(" "),
-                                    r.description,
-                                    Color(r.color),
-                                    s.pts.toSet() == r.points.toSet(),
-                                    "${r.points.count{it in s.pts}}/${r.points.size}",
-                                ) {
-                                    a.quick = s.copy(pts = r.points)
-                                    a.save()
+                    Label(
+                        "แตะจุดเพื่อเลือก / เอาออก",
+                        Modifier.align(Alignment.CenterHorizontally),
+                        size = 11.5,
+                        color = C.muted,
+                    )
+                    Column(Modifier.padding(top = 2.dp)) {
+                        HorizontalDivider(color = C.line)
+                        Spacer(Modifier.height(2.dp))
+                        Expandable("Region guide", REGIONS.map { Color(it.color) }) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                REGIONS.forEach { r ->
+                                    GuideRow(
+                                        r.name,
+                                        r.points.joinToString(" "),
+                                        r.description,
+                                        Color(r.color),
+                                        s.pts.toSet() == r.points.toSet(),
+                                        "${r.points.count{it in s.pts}}/${r.points.size}",
+                                    ) {
+                                        a.quick = s.copy(pts = r.points)
+                                        a.save()
+                                    }
                                 }
+                                Note(
+                                    "แตะเพื่อเลือกจุดของบริเวณนั้น · General associations · not a medical claim"
+                                )
                             }
-                            Note(
-                                "แตะเพื่อเลือกจุดของบริเวณนั้น · General associations · not a medical claim"
-                            )
                         }
                     }
                 }
-                CardBox(padding = 14) {
+                CardBox(padding = 14, radius = 24, gap = 12) {
                     FrequencyEditor(
                         s.copy(dur = a.quickMinutes * 60),
                         {
@@ -79,15 +101,18 @@ fun QuickScreen(a: AppState) {
                         },
                     )
                 }
-                CardBox {
-                    OptionRow("Duration") {
+                CardBox(padding = 14, topPadding = 4, bottomPadding = 4, radius = 24, gap = 0) {
+                    QuickOptionRow("Duration") {
                         Stepper(a.quickMinutes.toDouble(), "min", 1.0, 60.0) {
                             a.quickMinutes = it.toInt()
                             a.save()
                         }
                     }
-                    if (a.pro)
-                        OptionRow("Duty cycle") {
+                    HorizontalDivider(color = C.line)
+                    QuickOptionRow("Intensity") { Intensity(a) }
+                    HorizontalDivider(color = C.line)
+                    if (a.pro) {
+                        QuickOptionRow("Duty", pro = true) {
                             Stepper(
                                 (s.duty.takeIf { it > 0 } ?: a.spec.duty).toDouble(),
                                 "%",
@@ -99,8 +124,9 @@ fun QuickScreen(a: AppState) {
                                 a.save()
                             }
                         }
-                    OptionRow("Intensity") { Intensity(a) }
-                    OptionRow("EEG Closed-loop") {
+                        HorizontalDivider(color = C.line)
+                    }
+                    QuickOptionRow("EEG Closed-loop") {
                         Toggle(if (a.closedLoop) "On" else "Off", a.closedLoop) {
                             a.requestClosedLoop()
                         }
@@ -140,7 +166,16 @@ fun QuickScreen(a: AppState) {
 
 @Composable
 fun FrequencyEditor(s: Step, onChange: (Step) -> Unit, compact: Boolean = false) {
-    Segments(listOf("Fixed", "Sweep"), if (s.mode == "sweep") "Sweep" else "Fixed") {
+    if (compact) {
+        CompactFrequencyEditor(s, onChange)
+        return
+    }
+    val palette = C
+    Segments(
+        listOf("Fixed", "Sweep"),
+        if (s.mode == "sweep") "Sweep" else "Fixed",
+        surfaceSelection = true,
+    ) {
         onChange(s.copy(mode = it.lowercase()))
     }
     if (s.mode != "sweep") {
@@ -149,76 +184,121 @@ fun FrequencyEditor(s: Step, onChange: (Step) -> Unit, compact: Boolean = false)
             val raw = 10.0.pow(slider / 1000.0 * 2)
             val shown = if (raw < 10) (raw * 2).roundToInt() / 2.0 else raw.roundToInt().toDouble()
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                RoundAction("−", "ลดความถี่", size = 46, enabled = s.f > 1) {
+                RoundAction(
+                    "−",
+                    "ลดความถี่",
+                    size = 48,
+                    background = C.surface2,
+                    enabled = s.f > 1,
+                ) {
                     onChange(s.copy(f = (s.f - if (s.f < 10) .5 else 1.0).coerceIn(1.0, 100.0)))
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     Text(
                         num(shown),
+                        modifier =
+                            Modifier.height(58.dp)
+                                .wrapContentHeight(Alignment.CenterVertically, unbounded = true),
                         fontSize = 58.sp,
                         lineHeight = 58.sp,
+                        letterSpacing = (-1.5).sp,
+                        style =
+                            androidx.compose.ui.text.TextStyle(
+                                platformStyle =
+                                    androidx.compose.ui.text.PlatformTextStyle(
+                                        includeFontPadding = false
+                                    ),
+                                lineHeightStyle =
+                                    androidx.compose.ui.text.style.LineHeightStyle(
+                                        androidx.compose.ui.text.style.LineHeightStyle.Alignment
+                                            .Center,
+                                        androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
+                                    ),
+                            ),
                         fontFamily = DisplayFont,
                         fontWeight = FontWeight.Medium,
                         color = C.ink,
                     )
                     Note("Hz · ${bandName(shown)}")
                 }
-                RoundAction("+", "เพิ่มความถี่", size = 46, enabled = s.f < 100) {
+                RoundAction(
+                    "+",
+                    "เพิ่มความถี่",
+                    size = 48,
+                    background = C.surface2,
+                    enabled = s.f < 100,
+                ) {
                     onChange(s.copy(f = (s.f + if (s.f < 10) .5 else 1.0).coerceIn(1.0, 100.0)))
                 }
             }
-            Slider(
-                slider,
-                { slider = it },
-                valueRange = 0f..1000f,
-                onValueChangeFinished = {
-                    val f = 10.0.pow(slider / 1000.0 * 2)
-                    onChange(
-                        s.copy(
-                            f =
-                                if (f < 10) (f * 2).roundToInt() / 2.0
-                                else f.roundToInt().toDouble()
-                        )
-                    )
-                },
-                modifier =
-                    Modifier.fillMaxWidth().height(26.dp).semantics {
-                        contentDescription = "ความถี่"
-                    },
-                thumb = {
-                    Box(
-                        Modifier.size(26.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .border(3.dp, C.accent, CircleShape)
-                    )
-                },
-                track = {
-                    Row(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))) {
-                        listOf(
-                                .30f to 0xFF9AA5A1,
-                                .15f to 0xFF7A5BC9,
-                                .09f to 0xFF2A8C82,
-                                .05f to 0xFF4FA36B,
-                                .15f to 0xFFD89A1E,
-                                .26f to 0xFFC2563A,
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Slider(
+                    slider,
+                    { slider = it },
+                    valueRange = 0f..1000f,
+                    onValueChangeFinished = {
+                        val f = 10.0.pow(slider / 1000.0 * 2)
+                        onChange(
+                            s.copy(
+                                f =
+                                    if (f < 10) (f * 2).roundToInt() / 2.0
+                                    else f.roundToInt().toDouble()
                             )
-                            .forEach { (weight, color) ->
-                                Box(
-                                    Modifier.weight(weight).fillMaxHeight().background(Color(color))
-                                )
-                            }
-                    }
-                },
-            )
+                        )
+                    },
+                    modifier =
+                        Modifier.fillMaxWidth().padding(top = 4.dp).height(8.dp).semantics {
+                            contentDescription = "ความถี่"
+                        },
+                    thumb = {
+                        Box(
+                            Modifier.requiredSize(26.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .border(3.dp, C.accent, CircleShape)
+                        )
+                    },
+                    track = {
+                        Canvas(Modifier.fillMaxWidth().height(8.dp)) {
+                            val extra = 13.dp.toPx()
+                            val width = size.width + extra * 2
+                            drawRoundRect(
+                                Brush.horizontalGradient(
+                                    0f to Color(0xFF9AA5A1),
+                                    .30f to Color(0xFF9AA5A1),
+                                    .30f to Color(0xFF7A5BC9),
+                                    .45f to Color(0xFF7A5BC9),
+                                    .45f to Color(0xFF2A8C82),
+                                    .54f to Color(0xFF2A8C82),
+                                    .54f to Color(0xFF4FA36B),
+                                    .59f to Color(0xFF4FA36B),
+                                    .59f to Color(0xFFD89A1E),
+                                    .74f to Color(0xFFD89A1E),
+                                    .74f to Color(0xFFC2563A),
+                                    1f to Color(0xFFC2563A),
+                                    startX = -extra,
+                                    endX = size.width + extra,
+                                ),
+                                topLeft = androidx.compose.ui.geometry.Offset(-extra, 0f),
+                                size = androidx.compose.ui.geometry.Size(width, size.height),
+                                cornerRadius =
+                                    androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
+                            )
+                        }
+                    },
+                )
+            }
             FrequencyScale()
         } else
             OptionRow("Frequency") {
-                Stepper(s.f, "Hz", 1.0, 100.0, if (s.f < 10) .5 else 1.0) {
+                Stepper(s.f, "Hz", 1.0, 100.0, if (s.f < 10) .5 else 1.0, large = true) {
                     onChange(s.copy(f = it))
                 }
             }
@@ -271,6 +351,24 @@ fun FrequencyEditor(s: Step, onChange: (Step) -> Unit, compact: Boolean = false)
                 }
             }
         }
+        Canvas(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp).height(8.dp)) {
+            drawRoundRect(
+                palette.surface2,
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
+            )
+            val left = (log10(min(s.f1, s.f2)) / 2 * size.width).toFloat()
+            val right = (log10(max(s.f1, s.f2)) / 2 * size.width).toFloat()
+            drawRoundRect(
+                Brush.horizontalGradient(listOf(palette.accent, Color(0xFFFFB4A6))),
+                topLeft = androidx.compose.ui.geometry.Offset(left, 0f),
+                size =
+                    androidx.compose.ui.geometry.Size(
+                        (right - left).coerceAtLeast(0f),
+                        size.height,
+                    ),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
+            )
+        }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SWEEP_PRESETS.chunked(2).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -319,8 +417,76 @@ fun FrequencyEditor(s: Step, onChange: (Step) -> Unit, compact: Boolean = false)
 }
 
 @Composable
+private fun CompactFrequencyEditor(s: Step, onChange: (Step) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Label("Frequency", size = 12, color = C.muted)
+            Segments(
+                listOf("Fixed", "Sweep"),
+                if (s.mode == "sweep") "Sweep" else "Fixed",
+                Modifier.width(130.dp),
+                compact = true,
+            ) {
+                onChange(s.copy(mode = it.lowercase()))
+            }
+        }
+        if (s.mode == "sweep") {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Note("From")
+                    Stepper(s.f1, "Hz", 1.0, 100.0, narrow = true) { onChange(s.copy(f1 = it)) }
+                }
+                Label("→", Modifier.padding(bottom = 12.dp), color = C.muted)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Note("To")
+                    Stepper(s.f2, "Hz", 1.0, 100.0, narrow = true) { onChange(s.copy(f2 = it)) }
+                }
+            }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                SWEEP_PRESETS.forEach { (name, l, h) ->
+                    Pill(name, s.f1 == l && s.f2 == h) { onChange(s.copy(f1 = l, f2 = h)) }
+                }
+            }
+        } else {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Stepper(s.f, "Hz", 1.0, 100.0, if (s.f < 10) .5 else 1.0, large = true) {
+                    onChange(s.copy(f = it))
+                }
+            }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                BAND_PRESETS.forEach { (name, f) ->
+                    FrequencyChip("$name ${num(f)}", s.f == f, Color(bandColor(f))) {
+                        onChange(s.copy(f = f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun FrequencyScale() {
-    BoxWithConstraints(Modifier.fillMaxWidth().height(16.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(12.dp)) {
         Label("1", Modifier.align(Alignment.CenterStart), size = 10, color = C.muted, mono = true)
         listOf("4" to .30f, "8" to .45f, "13" to .56f, "30" to .74f).forEach { (label, fraction) ->
             Box(
@@ -410,54 +576,63 @@ fun ProgramScreen(a: AppState) {
     val step = scaled.steps[index]
     var deleting by remember { mutableStateOf(false) }
     ScreenColumn(p.id) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Title(p.name, Modifier.weight(1f), size = 23)
-            Box(
-                Modifier.size(36.dp)
-                    .clip(CircleShape)
-                    .clickable { a.toggleFavorite(p.id) }
-                    .semantics { contentDescription = "ติดดาว" },
-                contentAlignment = Alignment.Center,
-            ) {
-                LineIcon("star", color = if (p.id in a.favorites) Color(0xFFE09A12) else C.line)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Title(p.name, Modifier.weight(1f), size = 24)
+                Box(
+                    Modifier.size(36.dp)
+                        .clip(CircleShape)
+                        .clickable { a.toggleFavorite(p.id) }
+                        .semantics { contentDescription = "ติดดาว" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    LineIcon("star", color = if (p.id in a.favorites) Color(0xFFE09A12) else C.line)
+                }
             }
+            Note("${p.frequencyText} · ${p.goal}")
         }
-        Note("${p.frequencyText} · ${p.goal}")
         if (p.alpha)
             Label("α  ย่านอัลฟาจะปรับตาม IAPF เมื่อวัดใน Evaluate แล้ว", size = 11, color = C.muted)
         HeadMap(step.pts, Modifier.align(Alignment.CenterHorizontally).width(210.dp))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Label(step.label, size = 14, weight = FontWeight.Medium)
             Note(
-                "${step.pts.size} จุด · ${step.frequencyText} · ${timeText(step.dur.toDouble())}" +
+                "${a.repo.regionCaption(step.pts)} · ${step.frequencyText} · ${timeText(step.dur.toDouble())}" +
                     if (a.pro) " · duty ${step.duty.takeIf{it>0}?:a.spec.duty}%" else ""
             )
         }
-        Timeline(scaled.steps, index)
+        Timeline(scaled.steps, index, big = true)
         if (scaled.steps.size > 1)
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Column {
                 scaled.steps.forEachIndexed { i, s ->
                     Row(
                         Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(if (i == index) C.surface else Color.Transparent)
-                            .border(
-                                1.dp,
-                                if (i == index) C.line else Color.Transparent,
-                                RoundedCornerShape(12.dp),
-                            )
                             .clickable { a.selectedStep = i }
-                            .padding(10.dp),
+                            .padding(horizontal = 6.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(bandColor(s.f))))
-                        Label(s.label, Modifier.weight(1f), size = 12)
-                        Label(s.frequencyText, size = 10, color = C.muted, mono = true)
-                        Label(timeText(s.dur.toDouble()), size = 10, mono = true)
+                        Box(
+                            Modifier.width(8.dp)
+                                .height(22.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(stepBrush(s))
+                        )
+                        Label(s.label, Modifier.weight(1f), size = 13.5)
+                        Label(
+                            s.frequencyText,
+                            size = 12,
+                            color = C.muted.copy(alpha = .7f),
+                            mono = true,
+                        )
+                        Label(timeText(s.dur.toDouble()), size = 12, color = C.muted, mono = true)
                     }
                 }
             }
+        // The reference's empty step-list still occupies a flex gap.
+        if (scaled.steps.size == 1) Spacer(Modifier.height(0.dp))
         CardBox(padding = 14, radius = 18, gap = 10) {
             OptionRow("Duration") {
                 Stepper(a.programMinutes.toDouble(), "min", 1.0, 60.0) {
@@ -524,18 +699,11 @@ fun ProgramScreen(a: AppState) {
 private fun AboutProgram(a: AppState, p: Program) {
     val info = a.repo.info.optJSONObject(p.id) ?: return
     val evidence = a.repo.evidence.getJSONArray(info.getString("ev"))
-    CardBox(padding = 14) {
+    CardBox(padding = 14, radius = 20, gap = 10, outlined = false) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Title("About", size = 15)
             Spacer(Modifier.weight(1f))
-            Label(
-                evidence.getString(0),
-                Modifier.clip(CircleShape)
-                    .background(C.ok.copy(alpha = .1f))
-                    .padding(horizontal = 9.dp, vertical = 3.dp),
-                size = 10,
-                color = C.ok,
-            )
+            EvidenceBadge(info.getString("ev"), evidence.getString(0))
         }
         Label(info.getString("why"), size = 13)
         Column(
@@ -547,14 +715,14 @@ private fun AboutProgram(a: AppState, p: Program) {
         ) {
             Label("ความถี่   ${info.getString("f")}", size = 12)
             Label(
-                "ตำแหน่ง   ${p.steps.map{areaName(it.pts)}.distinct().joinToString(" → ")}",
+                "ตำแหน่ง   ${p.steps.map{a.repo.regionName(it.pts)}.distinct().joinToString(" → ")}",
                 size = 12,
             )
             Label("กลไก   NIR → ไมโทคอนเดรีย (CCO) → ATP · การกะพริบ → คลื่นสมอง", size = 12)
         }
         Note(evidence.getString(1))
         val refs = info.getJSONArray("r").strings() + "hashmi"
-        Expandable("อ้างอิง ${refs.size}") {
+        Expandable("อ้างอิง ${refs.size}", compactDisclosure = true) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 refs.forEachIndexed { i, k ->
                     Label("${i+1}. ${a.repo.references.optString(k)}", size = 11, color = C.muted)
@@ -574,108 +742,264 @@ private fun AboutProgram(a: AppState, p: Program) {
 fun BuilderScreen(a: AppState) {
     val p = a.draft ?: return
     ScreenColumn("builder") {
-        InputField(p.name, { a.draft = p.copy(name = it.take(40)) }, "ชื่อโปรแกรม")
+        androidx.compose.foundation.text.BasicTextField(
+            p.name,
+            { value -> a.draft = a.draft?.copy(name = value.take(40)) },
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(C.surface2)
+                .padding(horizontal = 11.dp, vertical = 9.dp),
+            singleLine = true,
+            textStyle =
+                androidx.compose.ui.text.TextStyle(
+                    fontFamily = BodyFont,
+                    fontSize = 15.sp,
+                    lineHeight = 23.25.sp,
+                    color = C.ink,
+                ),
+            cursorBrush = SolidColor(C.accent),
+        )
         Note(
             "${p.steps.size} step${if(p.steps.size>1)"s"else""} · total ${timeText(p.seconds.toDouble())}"
         )
         Timeline(p.steps, a.editStep)
-        p.steps.forEachIndexed { i, s ->
-            if (i != a.editStep)
-                Row(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(C.surface)
-                        .clickable { a.editStep = i }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Note("${i+1}")
-                    Column(Modifier.weight(1f)) {
-                        Label(s.autoLabel(), size = 13, weight = FontWeight.Medium)
-                        Note("${timeText(s.dur.toDouble())} · ${if(s.power<=50)"Gentle"else"Full"}")
-                    }
-                    Note("›")
-                }
-            else
-                CardBox(
-                    modifier = Modifier.border(1.5.dp, C.accent, RoundedCornerShape(24.dp)),
-                    padding = 14,
-                ) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Label(
-                            "${i+1}  ${s.autoLabel()}",
-                            Modifier.weight(1f),
-                            size = 13,
-                            weight = FontWeight.Medium,
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Pill("↑") { a.builderAction("up") }
-                        Pill("↓") { a.builderAction("down") }
-                        Pill("Duplicate") { a.builderAction("duplicate") }
-                        Pill("Delete") { a.builderAction("delete") }
-                    }
-                    Note("Area")
-                    var custom by
-                        remember(i) {
-                            mutableStateOf(AREAS.values.none { it.toSet() == s.pts.toSet() })
-                        }
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            p.steps.forEachIndexed { i, s ->
+                if (i != a.editStep)
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(C.surface)
+                            .border(1.dp, C.line, RoundedCornerShape(16.dp))
+                            .clickable { a.editStep = i }
+                            .padding(horizontal = 13.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        AREAS.forEach { (n, pts) ->
-                            Pill(n, s.pts.toSet() == pts.toSet()) {
-                                custom = false
-                                a.updateStep(s.copy(pts = pts))
-                            }
-                        }
-                        Pill("Custom…", custom) { custom = !custom }
-                    }
-                    if (custom) {
-                        HeadMap(
-                            s.pts,
-                            Modifier.align(Alignment.CenterHorizontally).width(220.dp),
-                        ) { n ->
-                            a.updateStep(
-                                s.copy(
-                                    pts =
-                                        POINTS.filter { if (it == n) it !in s.pts else it in s.pts }
-                                )
+                        StepNumber(i + 1)
+                        Box(
+                            Modifier.width(6.dp)
+                                .height(28.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(stepBrush(s))
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Label(s.autoLabel(), size = 13.5, weight = FontWeight.Medium)
+                            Label(
+                                "${timeText(s.dur.toDouble())} · ${if(s.power<=50)"Gentle"else"Full"}",
+                                size = 11.5,
+                                color = C.muted,
                             )
                         }
-                        Note("แตะจุดเพื่อเลือก / เอาออก")
+                        Label("›", size = 20, color = C.muted)
                     }
-                    Note("Frequency")
-                    FrequencyEditor(s, a::updateStep, compact = true)
-                    OptionRow("Duration") {
-                        Stepper((s.dur / 60.0).roundToInt().toDouble(), "min", 1.0, 30.0) {
-                            a.updateStep(s.copy(dur = it.toInt() * 60))
-                        }
-                    }
-                    Note("Power")
-                    Segments(listOf("Gentle", "Full"), if (s.power <= 50) "Gentle" else "Full") {
-                        a.updateStep(s.copy(power = if (it == "Gentle") 50 else 100))
-                    }
-                    OptionRow("Duty cycle") {
-                        Stepper(
-                            (s.duty.takeIf { it > 0 } ?: a.spec.duty).toDouble(),
-                            "%",
-                            10.0,
-                            90.0,
-                            10.0,
+                else
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(C.surface)
+                            .border(1.5.dp, C.accent, RoundedCornerShape(18.dp))
+                            .padding(horizontal = 15.5.dp, vertical = 13.5.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            a.updateStep(s.copy(duty = it.toInt()))
+                            StepNumber(i + 1)
+                            Label(
+                                s.autoLabel(),
+                                Modifier.weight(1f),
+                                size = 14,
+                                weight = FontWeight.Medium,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                BuilderTool("up", "ขึ้น", i > 0) { a.builderAction("up") }
+                                BuilderTool("dn", "ลง", i < p.steps.lastIndex) {
+                                    a.builderAction("down")
+                                }
+                                BuilderTool("copy", "ทำซ้ำ", true) { a.builderAction("duplicate") }
+                                BuilderTool("trash", "ลบ", p.steps.size > 1) {
+                                    a.builderAction("delete")
+                                }
+                            }
+                        }
+                        var custom by
+                            remember(p.id, i) {
+                                mutableStateOf(AREAS.values.none { it.toSet() == s.pts.toSet() })
+                            }
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Label("Area", size = 12, color = C.muted)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                AREAS.forEach { (name, points) ->
+                                    Pill(name, s.pts.toSet() == points.toSet()) {
+                                        custom = false
+                                        a.updateStep(s.copy(pts = points))
+                                    }
+                                }
+                                Pill("Custom…", custom) { custom = true }
+                            }
+                            if (custom) {
+                                HeadMap(
+                                    s.pts,
+                                    Modifier.align(Alignment.CenterHorizontally).width(220.dp),
+                                ) { n ->
+                                    a.updateStep(
+                                        s.copy(
+                                            pts =
+                                                POINTS.filter {
+                                                    if (it == n) it !in s.pts else it in s.pts
+                                                }
+                                        )
+                                    )
+                                }
+                                Note(
+                                    "แตะจุดเพื่อเลือก / เอาออก",
+                                    Modifier.align(Alignment.CenterHorizontally),
+                                )
+                            }
+                        }
+                        FrequencyEditor(s, a::updateStep, compact = true)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Label("Duration", size = 12, color = C.muted)
+                                Stepper(
+                                    (s.dur / 60.0).roundToInt().toDouble(),
+                                    "min",
+                                    1.0,
+                                    30.0,
+                                    small = true,
+                                ) {
+                                    a.updateStep(s.copy(dur = it.toInt() * 60))
+                                }
+                            }
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Label("Power", size = 12, color = C.muted)
+                                Segments(
+                                    listOf("Gentle", "Full"),
+                                    if (s.power <= 50) "Gentle" else "Full",
+                                    compact = true,
+                                ) {
+                                    a.updateStep(s.copy(power = if (it == "Gentle") 50 else 100))
+                                }
+                            }
+                        }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Label("Duty cycle", size = 12, color = C.muted)
+                            Stepper(
+                                (s.duty.takeIf { it > 0 } ?: a.spec.duty).toDouble(),
+                                "%",
+                                10.0,
+                                90.0,
+                                10.0,
+                                large = true,
+                            ) {
+                                a.updateStep(s.copy(duty = it.toInt()))
+                            }
                         }
                     }
-                }
+            }
         }
-        Action("+ Add Step", primary = false) { a.builderAction("add") }
-        if (a.error.isNotBlank()) Label(a.error, size = 12, color = C.accent)
+        Box(
+            Modifier.fillMaxWidth()
+                .dashedBorder(C.line)
+                .clickable { a.builderAction("add") }
+                .padding(13.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Label("+ Add Step", size = 14, color = C.accent, weight = FontWeight.Medium)
+        }
+        if (a.error.isNotBlank()) Label(a.error, size = 12.5, color = C.accent)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Action("Cancel", Modifier.weight(1f), primary = false) { a.back() }
             Action("Save Program", Modifier.weight(2f)) { a.saveDraft() }
         }
+    }
+}
+
+@Composable
+private fun StepNumber(number: Int) {
+    Box(
+        Modifier.size(26.dp).clip(CircleShape).background(C.surface2),
+        contentAlignment = Alignment.Center,
+    ) {
+        Label(number.toString(), size = 12, mono = true)
+    }
+}
+
+@Composable
+private fun BuilderTool(icon: String, label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(30.dp)
+            .alpha(if (enabled) 1f else .3f)
+            .clip(RoundedCornerShape(9.dp))
+            .background(C.surface2)
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        LineIcon(
+            icon,
+            Modifier.size(if (icon == "copy" || icon == "trash") 15.dp else 16.dp),
+            C.muted,
+        )
+    }
+}
+
+@Composable
+private fun QuickSelection(text: String, onClick: () -> Unit) {
+    Box(
+        Modifier.clip(CircleShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 5.dp)
+    ) {
+        Label(text, size = 12.5)
+    }
+}
+
+@Composable
+private fun QuickOptionRow(
+    label: String,
+    pro: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Label(label)
+            if (pro)
+                Label(
+                    "PRO",
+                    Modifier.border(1.dp, C.accent, RoundedCornerShape(5.dp))
+                        .padding(horizontal = 4.dp),
+                    size = 9.5,
+                    weight = FontWeight.SemiBold,
+                    color = C.accent,
+                )
+        }
+        content()
     }
 }

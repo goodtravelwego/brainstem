@@ -12,11 +12,15 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
@@ -49,7 +53,7 @@ data class Palette(
 
 val Light =
     Palette(
-        Color(0xFFF6F8F7),
+        Color(0xFFE9EFEC),
         Color.White,
         Color(0xFFEEF3F1),
         Color(0xFF13302A),
@@ -60,7 +64,7 @@ val Light =
     )
 val Dark =
     Palette(
-        Color(0xFF101A18),
+        Color(0xFF0A1110),
         Color(0xFF16221F),
         Color(0xFF1C2B27),
         Color(0xFFE1ECE8),
@@ -99,7 +103,19 @@ fun BrainTheme(dark: Boolean, content: @Composable () -> Unit) {
                     bodyMedium = TextStyle(fontFamily = BodyFont, fontSize = 13.sp, color = p.ink),
                 ),
         ) {
-            content()
+            ProvideTextStyle(
+                LocalTextStyle.current.copy(
+                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    lineHeightStyle =
+                        androidx.compose.ui.text.style.LineHeightStyle(
+                            androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+                            androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
+                        ),
+                    letterSpacing = 0.sp,
+                )
+            ) {
+                content()
+            }
         }
     }
 }
@@ -128,10 +144,11 @@ fun Label(
 }
 
 @Composable
-fun Note(s: String, modifier: Modifier = Modifier) = Label(s, modifier, size = 12, color = C.muted)
+fun Note(s: String, modifier: Modifier = Modifier) =
+    Label(s, modifier, size = 12.5, color = C.muted)
 
 @Composable
-fun Title(s: String, modifier: Modifier = Modifier, size: Int = 17) =
+fun Title(s: String, modifier: Modifier = Modifier, size: Number = 17) =
     Label(s, modifier, size = size, weight = FontWeight.Medium, display = true)
 
 @Composable
@@ -139,26 +156,64 @@ fun CardBox(
     modifier: Modifier = Modifier,
     accent: Boolean = false,
     padding: Int = 16,
-    radius: Int = 24,
-    gap: Int = 12,
+    radius: Int = 22,
+    gap: Int = 10,
+    bottomPadding: Int = padding,
+    topPadding: Int = padding,
+    insetBorder: Boolean = false,
+    headGradient: Boolean = false,
+    outlined: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(radius.dp))
-            .background(
-                if (accent) C.accent.copy(alpha = .07f).compositeOver(C.surface) else C.surface
+            .then(
+                if (accent)
+                    Modifier.background(
+                        Brush.linearGradient(
+                            0f to C.accent.copy(alpha = .11f).compositeOver(C.surface),
+                            .65f to C.surface,
+                        )
+                    )
+                else Modifier.background(C.surface)
+            )
+            .then(
+                if (headGradient) Modifier.referenceHeadGradient(C.surface, C.accent) else Modifier
             )
             .border(
                 1.dp,
-                if (accent) C.accent.copy(alpha = .28f) else C.line,
+                if (!outlined) Color.Transparent
+                else if (accent) C.accent.copy(alpha = .28f).compositeOver(C.line) else C.line,
                 RoundedCornerShape(radius.dp),
             )
-            .padding(padding.dp),
+            .padding(
+                start = (padding + if (insetBorder || !outlined) 0 else 1).dp,
+                end = (padding + if (insetBorder || !outlined) 0 else 1).dp,
+                top = (topPadding + if (insetBorder || !outlined) 0 else 1).dp,
+                bottom = (bottomPadding + if (insetBorder || !outlined) 0 else 1).dp,
+            ),
         verticalArrangement = Arrangement.spacedBy(gap.dp),
         content = content,
     )
+}
+
+fun Modifier.referenceHeadGradient(surface: Color, accent: Color) = drawWithCache {
+    val rx = size.width * 1.2f
+    val sy = (size.height * .9f / rx).coerceAtLeast(.01f)
+    val brush =
+        Brush.radialGradient(
+            0f to accent.copy(alpha = .1f).compositeOver(surface),
+            .7f to surface,
+            center = Offset(size.width / 2, 0f),
+            radius = rx,
+        )
+    onDrawBehind {
+        scale(1f, sy, pivot = Offset.Zero) {
+            drawRect(brush, size = Size(size.width, size.height / sy))
+        }
+    }
 }
 
 @Composable
@@ -169,21 +224,24 @@ fun RoundAction(
     size: Int = 36,
     color: Color = C.ink,
     filled: Boolean = false,
+    background: Color = C.surface,
     onClick: () -> Unit,
 ) {
     Box(
         Modifier.size(size.dp)
             .clip(CircleShape)
-            .background(if (filled) C.accent else C.surface)
+            .background(if (filled) C.accent else background)
             .border(1.dp, if (filled) C.accent else C.line, CircleShape)
             .clickable(enabled = enabled, onClick = onClick)
             .semantics { contentDescription = label }
             .then(if (enabled) Modifier else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        Label(
+        Text(
             text,
-            size = 18,
+            fontSize = 20.sp,
+            lineHeight = 20.sp,
+            fontFamily = FontFamily.SansSerif,
             color = if (!enabled) C.muted.copy(alpha = .35f) else if (filled) Color.White else color,
         )
     }
@@ -199,13 +257,13 @@ fun Pill(
     Box(
         modifier
             .clip(RoundedCornerShape(50))
-            .background(if (selected) C.accent else C.surface)
-            .border(1.dp, if (selected) C.accent else C.line, RoundedCornerShape(50))
+            .background(if (selected) selectionColor() else C.surface)
+            .border(1.dp, if (selected) selectionColor() else C.line, RoundedCornerShape(50))
             .clickable(onClick = onClick)
-            .padding(horizontal = 13.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Label(text, size = 12, color = if (selected) Color.White else C.muted)
+        Label(text, size = 12, color = if (selected) selectionInk() else C.muted)
     }
 }
 
@@ -220,9 +278,32 @@ fun ChipRow(items: List<String>, selected: String, onClick: (String) -> Unit) {
 }
 
 @Composable
-fun Segments(items: List<String>, selected: String, onClick: (String) -> Unit) {
+fun FrequencyChip(text: String, selected: Boolean, band: Color, onClick: () -> Unit) {
+    Box(
+        Modifier.clip(CircleShape)
+            .background(if (selected) band else C.surface)
+            .border(1.dp, if (selected) band else C.line, CircleShape)
+            .drawBehind { drawRect(band, size = Size(3.dp.toPx(), size.height)) }
+            .clickable(onClick = onClick)
+            .padding(start = 14.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Label(text, size = 12, color = if (selected) Color.White else C.muted)
+    }
+}
+
+@Composable
+fun Segments(
+    items: List<String>,
+    selected: String,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    surfaceSelection: Boolean = false,
+    onClick: (String) -> Unit,
+) {
     Row(
-        Modifier.fillMaxWidth()
+        modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(13.dp))
             .background(C.surface2)
             .padding(3.dp),
@@ -231,21 +312,63 @@ fun Segments(items: List<String>, selected: String, onClick: (String) -> Unit) {
         items.forEach { v ->
             Box(
                 Modifier.weight(1f)
+                    .then(
+                        if (surfaceSelection && v == selected)
+                            Modifier.shadow(2.dp, RoundedCornerShape(10.dp))
+                        else Modifier
+                    )
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (v == selected) C.surface else Color.Transparent)
+                    .background(
+                        if (v == selected) {
+                            if (surfaceSelection) C.surface else selectionColor()
+                        } else Color.Transparent
+                    )
                     .clickable { onClick(v) }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = if (compact) 6.dp else 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Label(
                     v,
-                    size = 13,
+                    size = if (compact) 12.5 else 13.5,
                     weight = if (v == selected) FontWeight.Medium else FontWeight.Normal,
-                    color = if (v == selected) C.ink else C.muted,
+                    color =
+                        if (surfaceSelection) {
+                            if (v == selected) C.ink else C.muted
+                        } else if (v == selected) selectionInk() else C.ink,
                 )
             }
         }
     }
+}
+
+@Composable fun selectionColor() = if (C.bg == Dark.bg) Color(0xFFF5A394) else Color(0xFFC8452F)
+
+@Composable fun selectionInk() = if (C.bg == Dark.bg) Color(0xFFC8452F) else Color.White
+
+@Composable
+fun EvidenceBadge(kind: String, text: String) {
+    val color =
+        if (kind == "pilot") C.ok else if (C.bg == Dark.bg) Color(0xFFE3A63D) else Color(0xFF9A6200)
+    Label(
+        text,
+        Modifier.clip(CircleShape)
+            .background(color.copy(alpha = .15f))
+            .padding(horizontal = 9.dp, vertical = 3.dp),
+        size = 11,
+        color = color,
+    )
+}
+
+fun Modifier.dashedBorder(color: Color, radius: Dp = 16.dp) = drawBehind {
+    drawRoundRect(
+        color,
+        cornerRadius = CornerRadius(radius.toPx()),
+        style =
+            Stroke(
+                1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())),
+            ),
+    )
 }
 
 @Composable
@@ -288,23 +411,38 @@ fun Stepper(
     max: Double,
     step: Double = 1.0,
     narrow: Boolean = false,
+    large: Boolean = false,
+    small: Boolean = false,
     onChange: (Double) -> Unit,
 ) {
     val compact = unit.isBlank()
     Row(
-        Modifier.clip(RoundedCornerShape(50))
+        Modifier.then(if (small) Modifier.fillMaxWidth() else Modifier)
+            .clip(RoundedCornerShape(50))
             .border(1.dp, C.line, RoundedCornerShape(50))
-            .padding(if (compact) 2.dp else if (narrow) 3.dp else 4.dp),
+            .padding(if (compact) 3.dp else if (narrow) 4.dp else 5.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (compact || narrow) 2.dp else 10.dp),
+        horizontalArrangement =
+            if (small) Arrangement.SpaceBetween
+            else Arrangement.spacedBy(if (compact || narrow) 2.dp else 10.dp),
     ) {
-        SmallStep("−", "ลด $unit", value > min, if (compact) 24 else if (narrow) 30 else 32) {
+        SmallStep(
+            "−",
+            "ลด $unit",
+            value > min,
+            if (compact) 24 else if (large) 38 else if (narrow || small) 30 else 32,
+        ) {
             onChange((value - step).coerceIn(min, max))
         }
         Label(
             num(value),
-            Modifier.widthIn(min = if (compact || narrow) 26.dp else 30.dp),
-            size = if (compact) 12.5 else if (narrow) 19 else 18,
+            Modifier.widthIn(
+                min =
+                    if (large) 44.dp
+                    else if (small) 28.dp else if (compact || narrow) 26.dp else 30.dp
+            ),
+            size =
+                if (compact) 12.5 else if (large) 22 else if (small) 17 else if (narrow) 19 else 18,
             weight = FontWeight.Medium,
             mono = compact,
             display = !compact,
@@ -312,7 +450,12 @@ fun Stepper(
             color = if (compact) C.accent else C.ink,
         )
         if (!compact) Label(unit, size = if (narrow) 11 else 12.5, color = C.muted)
-        SmallStep("+", "เพิ่ม $unit", value < max, if (compact) 24 else if (narrow) 30 else 32) {
+        SmallStep(
+            "+",
+            "เพิ่ม $unit",
+            value < max,
+            if (compact) 24 else if (large) 38 else if (narrow || small) 30 else 32,
+        ) {
             onChange((value + step).coerceIn(min, max))
         }
     }
@@ -449,27 +592,62 @@ fun OptionRow(label: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun Timeline(steps: List<Step>, selected: Int = -1, modifier: Modifier = Modifier) {
+fun Timeline(
+    steps: List<Step>,
+    selected: Int = -1,
+    modifier: Modifier = Modifier,
+    runStyle: Boolean = false,
+    big: Boolean = false,
+) {
+    val ink = C.ink
     Row(
-        modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(4.dp)),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier.fillMaxWidth().height(if (runStyle) 7.dp else if (big) 10.dp else 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         steps.forEachIndexed { i, s ->
             Box(
                 Modifier.weight(s.dur.toFloat())
-                    .fillMaxHeight()
-                    .background(
-                        if (s.phase.isNotEmpty()) C.muted.copy(alpha = .3f)
-                        else Color(bandColor(if (s.mode == "sweep") s.f1 else s.f))
+                    .requiredHeight(
+                        if (runStyle) 7.dp
+                        else if (i == selected) {
+                            if (big) 16.dp else 12.8.dp
+                        } else if (big) 10.dp else 8.dp
                     )
                     .then(
-                        if (i == selected) Modifier.border(1.dp, C.ink, RoundedCornerShape(3.dp))
+                        if (runStyle && i == selected)
+                            Modifier.drawBehind {
+                                drawRoundRect(
+                                    ink,
+                                    topLeft = Offset(-2.dp.toPx(), -2.dp.toPx()),
+                                    size =
+                                        Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx()),
+                                    cornerRadius = CornerRadius(4.dp.toPx()),
+                                    style = Stroke(2.dp.toPx()),
+                                )
+                            }
                         else Modifier
+                    )
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(
+                        if (s.phase.isNotEmpty()) SolidColor(C.muted.copy(alpha = .3f))
+                        else
+                            stepBrush(s, if (i == selected) 1f else if (selected < 0) .9f else .45f)
                     )
             )
         }
     }
 }
+
+fun stepBrush(step: Step, alpha: Float = 1f): Brush =
+    if (step.mode == "sweep")
+        Brush.horizontalGradient(
+            listOf(
+                Color(bandColor(step.f1)).copy(alpha = alpha),
+                Color(bandColor(step.f2)).copy(alpha = alpha),
+            )
+        )
+    else SolidColor(Color(bandColor(step.f)).copy(alpha = alpha))
 
 @Composable
 fun Wordmark(size: Int = 20, activeModule: Boolean = true) {
@@ -529,6 +707,15 @@ val ICONS =
 
 @Composable
 fun LineIcon(name: String, modifier: Modifier = Modifier.size(22.dp), color: Color = C.accent) {
+    REFERENCE_ICONS[name]?.let { resource ->
+        Icon(
+            painterResource(resource),
+            contentDescription = null,
+            modifier = modifier,
+            tint = color,
+        )
+        return
+    }
     val path =
         remember(name) {
             PathParser().parsePathString(ICONS[name] ?: ICONS.getValue("sun")).toPath()
@@ -551,7 +738,7 @@ fun HeadGlow(
     modifier: Modifier = Modifier.width(270.dp),
 ) {
     val p = C
-    val dark = p == Dark
+    val dark = p.bg == Dark.bg
     Canvas(modifier.aspectRatio(1f)) {
         val sx = size.width / 220f
         // The source SVG is centered inside a square run panel.
@@ -646,25 +833,36 @@ fun HeadMap(
                     style = Stroke(1f),
                 )
                 if (!glow) {
-                    drawLine(outline, Offset(22f, 106f), Offset(198f, 106f), .6f)
-                    drawLine(outline, Offset(110f, 18f), Offset(110f, 194f), .6f)
+                    drawLine(
+                        outline,
+                        Offset(22f, 106f),
+                        Offset(198f, 106f),
+                        1f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 4f)),
+                    )
+                    drawLine(
+                        outline,
+                        Offset(110f, 18f),
+                        Offset(110f, 194f),
+                        1f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 4f)),
+                    )
                 }
                 POINTS.forEachIndexed { i, n ->
                     val (x, y) = POINT_XY[i]
                     val on = n in points
                     if (on) {
-                        val alpha = values[n]?.toFloat()?.coerceIn(.1f, 1f) ?: 1f
+                        val alpha = values[n]?.toFloat()?.coerceIn(0f, 1f) ?: 1f
                         drawCircle(
                             Brush.radialGradient(
                                 listOf(
-                                    Color(0xFFFF6B5B)
-                                        .copy(alpha = if (glow) .7f * alpha else .48f * alpha),
+                                    Color(0xFFFF6B5B).copy(alpha = .7f * (.35f + .65f * alpha)),
                                     Color.Transparent,
                                 ),
                                 Offset(x, y),
-                                if (glow) 34f else 24f,
+                                if (glow) 34f else 13f + alpha * 11,
                             ),
-                            if (glow) 34f else 24f,
+                            if (glow) 34f else 13f + alpha * 11,
                             Offset(x, y),
                         )
                     }
@@ -675,12 +873,20 @@ fun HeadMap(
                             Offset(x, y),
                         )
                     else {
-                        drawCircle(if (on) p.accent else p.surface, 11f, Offset(x, y))
+                        val value = values[n]?.toFloat()?.coerceIn(0f, 1f) ?: 1f
                         drawCircle(
-                            if (on) p.accent else outline,
+                            if (on) Color(0xFFE8463C).copy(alpha = .45f + .55f * value)
+                            else p.surface,
                             11f,
                             Offset(x, y),
-                            style = Stroke(.8f),
+                        )
+                        drawCircle(
+                            if (on && onToggle != null) {
+                                if (p.bg == Dark.bg) Color(0xFFF5A394) else Color(0xFFC8452F)
+                            } else if (on) Color(0xFFB13E2C) else outline,
+                            11f,
+                            Offset(x, y),
+                            style = Stroke(if (on && onToggle != null) 2.5f else 1.2f),
                         )
                     }
                 }
@@ -708,7 +914,7 @@ fun HeadMap(
                         n,
                         fontSize = (7.5f * (w.value / 220)).sp,
                         color = if (n in points) Color.White else p.muted,
-                        fontFamily = BodyFont,
+                        fontFamily = MonoFont,
                         fontWeight = if (n in points) FontWeight.SemiBold else FontWeight.Normal,
                     )
                 }
@@ -717,21 +923,44 @@ fun HeadMap(
 }
 
 @Composable
-fun Expandable(title: String, colors: List<Color> = emptyList(), content: @Composable () -> Unit) {
+fun Expandable(
+    title: String,
+    colors: List<Color> = emptyList(),
+    compactDisclosure: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     var expanded by rememberSaveable(title) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
-            Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 7.dp),
+            Modifier.fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(
+                    vertical = if (compactDisclosure) 0.dp else 8.dp,
+                    horizontal = if (compactDisclosure) 0.dp else 2.dp,
+                ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Note(title)
+            if (compactDisclosure)
+                Label(if (expanded) "▾ $title" else "▸ $title", size = 12.5, color = C.accent)
+            else Label(title, size = 13, color = C.muted)
             if (colors.isNotEmpty())
-                Row(Modifier.weight(1f).height(5.dp).clip(CircleShape)) {
+                Row(Modifier.weight(1f).height(6.dp).clip(CircleShape)) {
                     colors.forEach { Box(Modifier.weight(1f).fillMaxHeight().background(it)) }
                 }
             else Spacer(Modifier.weight(1f))
-            Note(if (expanded) "⌃" else "⌄")
+            if (!compactDisclosure) {
+                val color = C.muted
+                Canvas(Modifier.size(16.dp)) {
+                    val path =
+                        Path().apply {
+                            moveTo(size.width * .25f, size.height * if (expanded) .625f else .375f)
+                            lineTo(size.width * .5f, size.height * if (expanded) .375f else .625f)
+                            lineTo(size.width * .75f, size.height * if (expanded) .625f else .375f)
+                        }
+                    drawPath(path, color, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
+                }
+            }
         }
         if (expanded) content()
     }

@@ -2,6 +2,8 @@ package com.brainstem.stimulate
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
@@ -19,6 +21,8 @@ class StimulateFlowTest {
 
     private fun snapshot(name: String) {
         rule.waitForIdle()
+        // Platform ripples animate on the render thread, outside the Compose test clock.
+        Thread.sleep(350)
         val inst = InstrumentationRegistry.getInstrumentation()
         val root = if (state.profileFormOpen) rule.onNode(isDialog()) else rule.onRoot()
         val bitmap = root.captureToImage().asAndroidBitmap()
@@ -29,6 +33,26 @@ class StimulateFlowTest {
         file.parentFile!!.mkdirs()
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
+        val layouts = org.json.JSONArray()
+        rule
+            .onAllNodes(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Text),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNodes()
+            .forEach { node ->
+                val bounds = node.boundsInRoot
+                layouts.put(
+                    org.json
+                        .JSONObject()
+                        .put("text", node.config[SemanticsProperties.Text].joinToString())
+                        .put("x", bounds.left)
+                        .put("y", bounds.top)
+                        .put("width", bounds.width)
+                        .put("height", bounds.height)
+                )
+            }
+        File(file.parentFile, "$name.layout.json").writeText(layouts.toString(2))
     }
 
     private fun finishHeadsetCheck() {
@@ -71,6 +95,20 @@ class StimulateFlowTest {
         rule.onNodeWithText("Train").assertDoesNotExist()
         rule.onNodeWithText("Map").assertDoesNotExist()
         snapshot("02-stimulate")
+        rule.onNodeWithContentDescription("คำอธิบาย Alpha Calm").performClick().assertIsSelected()
+        rule.runOnIdle { assertEquals(Screen.HOME, state.screen) }
+        rule
+            .onNodeWithText(
+                state.repo.presets.first { it.id == "std-alpha" }.goal,
+                substring = true,
+            )
+            .assertExists()
+        snapshot("20-program-info-expanded")
+        rule
+            .onNodeWithContentDescription("คำอธิบาย Alpha Calm")
+            .performClick()
+            .assertIsNotSelected()
+        rule.runOnIdle { assertEquals(Screen.HOME, state.screen) }
         rule.onNodeWithText("Focus", useUnmergedTree = true).performClick()
         rule.onNodeWithText("Gamma Focus").assertIsDisplayed()
         rule.onNodeWithText("Learn", useUnmergedTree = true).performClick()
@@ -80,6 +118,24 @@ class StimulateFlowTest {
         rule.onNodeWithContentDescription("ตั้งค่า").assertIsDisplayed()
         rule.onNodeWithContentDescription("ติดดาว").performClick()
         snapshot("03-program")
+        rule.runOnIdle { state.pro = true }
+        rule.onNodeWithText("Duplicate & Edit").performScrollTo().performClick()
+        rule.onNodeWithText("Alpha Calm (copy)").assertIsDisplayed()
+        rule.onNodeWithContentDescription("ขึ้น").assertIsNotEnabled()
+        rule.onNodeWithContentDescription("ลง").assertIsNotEnabled()
+        rule.onNodeWithContentDescription("ลบ").assertIsNotEnabled()
+        rule.onNodeWithContentDescription("ทำซ้ำ").assertIsEnabled()
+        snapshot("21-builder-alpha-copy")
+        rule.onNodeWithContentDescription("ทำซ้ำ").performClick()
+        rule.runOnIdle { assertEquals(2, state.draft!!.steps.size) }
+        rule.onNodeWithContentDescription("ลบ").assertIsEnabled().performClick()
+        rule.runOnIdle { assertEquals(1, state.draft!!.steps.size) }
+        rule.onNodeWithContentDescription("ลบ").assertIsNotEnabled()
+        rule.onNodeWithText("Cancel").performScrollTo().performClick()
+        rule.runOnIdle {
+            state.pro = false
+            assertEquals(Screen.PROGRAM, state.screen)
+        }
         rule.onNodeWithText("+ Session").performScrollTo().performClick()
         rule.runOnIdle { assertEquals("std-alpha", state.queue.single().pid) }
         snapshot("04-session-queue")
@@ -87,6 +143,10 @@ class StimulateFlowTest {
         rule.onNodeWithContentDescription("ตั้งค่า").assertIsDisplayed()
         rule.onNodeWithText("Clear", useUnmergedTree = true).performClick()
         rule.onNodeWithText("เลือกจุดก่อน").assertIsDisplayed()
+        rule.onNodeWithContentDescription("F3").performClick()
+        rule.runOnIdle { assertEquals(listOf("F3"), state.quick.pts) }
+        rule.onNodeWithContentDescription("F3").performClick()
+        rule.runOnIdle { assertTrue(state.quick.pts.isEmpty()) }
         rule.onNodeWithText("All", useUnmergedTree = true).performClick()
         snapshot("05-quick-start")
         rule.onNodeWithText("Sweep", useUnmergedTree = true).performClick()
@@ -137,6 +197,7 @@ class StimulateFlowTest {
             state.pro = true
             state.newProgram()
         }
+        snapshot("16-builder-new")
         rule.onNodeWithText("โปรแกรมใหม่").performTextReplacement("Native test program")
         rule.onNodeWithText("Sweep", useUnmergedTree = true).performScrollTo().performClick()
         repeat(5) {
@@ -150,15 +211,44 @@ class StimulateFlowTest {
             assertEquals(13.0, state.draft!!.steps.first().f1, 0.0)
             assertEquals(12.0, state.draft!!.steps.first().f2, 0.0)
         }
+        rule.onNodeWithContentDescription("เพิ่ม min").performScrollTo().assertIsDisplayed()
+        val durationIncrease =
+            rule.onNodeWithContentDescription("เพิ่ม min").fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Duration button remains full-width on compact displays",
+            durationIncrease.width >= 28 * rule.activity.resources.displayMetrics.density,
+        )
+        rule.onNodeWithContentDescription("เพิ่ม min").performClick()
+        rule.runOnIdle { assertEquals(360, state.draft!!.steps.first().dur) }
+        rule.onNodeWithContentDescription("ลด min").performScrollTo().performSemanticsAction(
+            SemanticsActions.OnClick
+        ) {
+            it()
+        }
+        rule.runOnIdle { assertEquals(300, state.draft!!.steps.first().dur) }
+        snapshot("17-builder-sweep")
         rule.onNodeWithText("+ Add Step").performScrollTo().performClick()
+        rule.runOnIdle { assertEquals(2, state.draft!!.steps.size) }
+        rule.onNodeWithContentDescription("ทำซ้ำ").performScrollTo().performClick()
+        rule.runOnIdle { assertEquals(3, state.draft!!.steps.size) }
+        rule.onNodeWithContentDescription("ขึ้น").performScrollTo().performClick()
+        rule.runOnIdle { assertEquals(1, state.editStep) }
+        rule.onNodeWithContentDescription("ลง").performScrollTo().performClick()
+        rule.runOnIdle { assertEquals(2, state.editStep) }
+        rule.onNodeWithContentDescription("ลบ").performScrollTo().performClick()
+        rule.runOnIdle { assertEquals(2, state.draft!!.steps.size) }
         rule.onNodeWithText("Save Program").performScrollTo().performClick()
         rule.runOnIdle {
             assertEquals(2, state.customs.single().steps.size)
             assertEquals("Native test program", state.customs.single().name)
         }
         snapshot("10-custom-program")
+        rule.runOnIdle { state.navigate(Screen.SETTINGS) }
+        snapshot("18-settings-pro")
+        rule.runOnIdle { state.pro = false }
+        snapshot("19-settings-easy")
         rule.runOnIdle {
-            state.navigate(Screen.SETTINGS)
+            state.pro = true
             state.theme = "dark"
         }
         snapshot("11-dark-settings")

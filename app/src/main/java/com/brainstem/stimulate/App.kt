@@ -8,17 +8,24 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
@@ -95,9 +102,11 @@ fun BrainApp(a: AppState) {
 @Composable
 private fun AppHeader(a: AppState) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp).heightIn(min = 40.dp),
+        Modifier.fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 10.dp)
+            .heightIn(min = 36.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (a.screen != Screen.HOME)
             Box(
@@ -111,8 +120,8 @@ private fun AppHeader(a: AppState) {
                 LineIcon("back", Modifier.size(19.dp), C.ink)
             }
         if (a.screen == Screen.HOME) {
-            Wordmark()
-            Label("PBM", size = 13, color = C.muted)
+            Wordmark(19)
+            Label("PBM", size = 13, color = C.muted, display = true, weight = FontWeight.Medium)
         } else {
             Box(
                 Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(C.accent),
@@ -156,7 +165,7 @@ fun ScreenColumn(key: Any, content: @Composable ColumnScope.() -> Unit) {
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 2.dp, bottom = 24.dp),
+                .padding(top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content,
         )
@@ -366,84 +375,97 @@ fun HomeScreen(a: AppState) {
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Row(
                     Modifier.clip(CircleShape)
                         .background(C.surface)
                         .border(1.dp, C.line, CircleShape)
-                        .padding(start = 8.dp, end = 11.dp, top = 5.dp, bottom = 5.dp),
+                        .padding(start = 9.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     Box(
                         Modifier.width(22.dp)
                             .height(11.dp)
-                            .border(1.dp, C.muted, RoundedCornerShape(2.dp))
+                            .border(1.5.dp, C.ink, RoundedCornerShape(3.dp))
                             .padding(2.dp)
                     ) {
                         Box(
-                            Modifier.fillMaxHeight()
-                                .fillMaxWidth(a.battery / 100f)
-                                .background(C.muted)
+                            Modifier.fillMaxHeight().fillMaxWidth(a.battery / 100f).background(C.ok)
                         )
                     }
-                    Label("${a.battery}%", size = 12, color = C.muted, weight = FontWeight.Medium)
+                    Label(
+                        "${a.battery}%",
+                        size = 12,
+                        color = C.ink,
+                        weight = FontWeight.SemiBold,
+                        mono = true,
+                    )
                 }
-                val now = java.time.LocalDate.now()
-                val last7 =
-                    a.history.filter {
-                        java.time.Instant.ofEpochMilli(it.date)
-                            .atZone(java.time.ZoneId.systemDefault())
-                            .toLocalDate() >= now.minusDays(6)
-                    }
+                val daily = weeklyMinutes(a.history)
                 Row(
                     Modifier.weight(1f)
                         .height(31.dp)
                         .clip(CircleShape)
                         .background(C.surface)
+                        .border(1.dp, C.line, CircleShape)
                         .clickable { a.navigate(Screen.HISTORY) }
-                        .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                        .padding(start = 13.dp, end = 9.dp, top = 5.dp, bottom = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Label("7 วัน", size = 11, color = C.muted)
-                    Label(
-                        "${(last7.sumOf{it.seconds}/60.0).roundToInt()} min",
-                        size = 12,
-                        weight = FontWeight.Medium,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    (6 downTo 0).forEach { i ->
-                        val d = now.minusDays(i.toLong())
-                        val active =
-                            last7.any {
-                                java.time.Instant.ofEpochMilli(it.date)
-                                    .atZone(java.time.ZoneId.systemDefault())
-                                    .toLocalDate() == d
-                            }
-                        Box(
-                            Modifier.size(10.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(if (active) C.accent else C.surface2)
-                                .then(
-                                    if (i == 0)
-                                        Modifier.border(1.dp, C.accent, RoundedCornerShape(3.dp))
-                                    else Modifier
-                                )
-                        )
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Label("7 วัน", size = 11, color = C.muted)
+                        Label("${daily.sum()} min", size = 12.5, weight = FontWeight.Medium)
                     }
-                    val activeDays =
-                        last7
-                            .map {
-                                java.time.Instant.ofEpochMilli(it.date)
-                                    .atZone(java.time.ZoneId.systemDefault())
-                                    .toLocalDate()
+                    Row(
+                        Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        daily.forEachIndexed { i, minutes ->
+                            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                Box(
+                                    Modifier.widthIn(max = 11.dp)
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(C.surface2)
+                                        .then(
+                                            if (i == 6)
+                                                Modifier.border(
+                                                    1.5.dp,
+                                                    C.accent,
+                                                    RoundedCornerShape(3.dp),
+                                                )
+                                            else Modifier
+                                        )
+                                ) {
+                                    if (minutes > 0)
+                                        Box(
+                                            Modifier.fillMaxSize()
+                                                .background(
+                                                    C.accent.copy(
+                                                        alpha = minOf(1f, .35f + minutes / 30f)
+                                                    )
+                                                )
+                                        )
+                                }
                             }
-                            .distinct()
-                            .size
-                    Label("$activeDays/7", size = 11, color = C.muted, mono = true)
-                    Label("›", size = 16, color = C.muted)
+                        }
+                    }
+                    Label("${daily.count{it>0}}/7", size = 11, color = C.muted, mono = true)
+                    Text(
+                        "›",
+                        fontSize = 15.sp,
+                        lineHeight = 15.sp,
+                        color = C.muted,
+                        fontFamily = BodyFont,
+                    )
                 }
             }
             SessionCard(a)
@@ -451,8 +473,8 @@ fun HomeScreen(a: AppState) {
                 Title("Programs", size = 15)
                 Spacer(Modifier.weight(1f))
                 if (a.pro)
-                    TextButton(onClick = { a.newProgram() }) {
-                        Label("+ New", size = 13, color = C.accent)
+                    Box(Modifier.clickable { a.newProgram() }.padding(horizontal = 8.dp)) {
+                        Label("+ New", size = 13.5, color = C.accent, weight = FontWeight.Medium)
                     }
                 Toggle("Pro", a.pro) { a.togglePro() }
             }
@@ -474,8 +496,8 @@ fun HomeScreen(a: AppState) {
             // scope.
             Row(
                 Modifier.fillMaxWidth()
-                    .border(1.dp, C.line, RoundedCornerShape(18.dp))
-                    .padding(12.dp),
+                    .dashedBorder(C.line)
+                    .padding(horizontal = 13.dp, vertical = 11.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -487,9 +509,9 @@ fun HomeScreen(a: AppState) {
                 ) {
                     LineIcon("pulse", Modifier.size(16.dp))
                 }
-                Column {
-                    Label("Alpha ของคุณ", size = 13)
-                    Note("ยังไม่มี · ใช้ความถี่เริ่มต้นของโปรแกรม")
+                Column(Modifier.weight(1f)) {
+                    Label("Alpha ของคุณ", size = 13.5, weight = FontWeight.Medium)
+                    Label("ยังไม่มี · ใช้ความถี่เริ่มต้นของโปรแกรม", size = 11.5, color = C.muted)
                 }
             }
             Spacer(Modifier.height(80.dp))
@@ -497,6 +519,12 @@ fun HomeScreen(a: AppState) {
         Row(
             Modifier.align(Alignment.BottomCenter)
                 .padding(bottom = 18.dp)
+                .shadow(
+                    12.dp,
+                    CircleShape,
+                    ambientColor = C.accent.copy(alpha = .65f),
+                    spotColor = C.accent.copy(alpha = .65f),
+                )
                 .clip(CircleShape)
                 .background(C.accent)
                 .clickable { a.navigate(Screen.QUICK) }
@@ -539,7 +567,7 @@ private fun ProgramRow(a: AppState, p: Program) {
                     .background(color.copy(alpha = .1f)),
                 contentAlignment = Alignment.Center,
             ) {
-                LineIcon(p.icon, color = color)
+                LineIcon(p.icon, Modifier.size(22.dp), color = color)
             }
             Column(Modifier.weight(1f)) {
                 Label(
@@ -548,7 +576,7 @@ private fun ProgramRow(a: AppState, p: Program) {
                     weight = FontWeight.Medium,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Note("${p.frequencyText} · ${p.minutes} min")
+                    Label("${p.frequencyText} · ${p.minutes} min", size = 12, color = C.muted)
                     if (p.alpha)
                         Label(
                             "  α",
@@ -558,31 +586,34 @@ private fun ProgramRow(a: AppState, p: Program) {
                         )
                 }
                 if (info) {
-                    Note(p.goal)
-                    a.repo.info.optJSONObject(p.id)?.let { details ->
-                        val evidence = a.repo.evidence.getJSONArray(details.getString("ev"))
-                        Label(
-                            evidence.getString(0),
-                            size = 10,
-                            color = C.accent,
-                            modifier =
-                                Modifier.padding(top = 3.dp)
-                                    .clip(RoundedCornerShape(5.dp))
-                                    .background(C.accent.copy(alpha = .08f))
-                                    .padding(horizontal = 5.dp, vertical = 1.dp),
-                        )
-                    }
+                    val details = a.repo.info.optJSONObject(p.id)
+                    val kind = details?.getString("ev")
+                    val evidence =
+                        kind?.let { a.repo.evidence.getJSONArray(it).getString(0) }.orEmpty()
+                    ProgramDescription(p.goal, kind.orEmpty(), evidence)
                 }
             }
             Box(
                 Modifier.size(26.dp)
                     .clip(CircleShape)
+                    .background(if (info) C.ink else Color.Transparent)
                     .border(1.dp, C.line, CircleShape)
-                    .clickable { info = !info }
-                    .semantics { contentDescription = "คำอธิบาย ${p.name}" },
+                    .clickable(role = Role.Button) { info = !info }
+                    .semantics {
+                        contentDescription = "คำอธิบาย ${p.name}"
+                        selected = info
+                    },
                 contentAlignment = Alignment.Center,
             ) {
-                Label("i", size = 15, color = C.muted)
+                Text(
+                    "i",
+                    fontSize = 12.sp,
+                    lineHeight = 12.sp,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (info) C.surface else C.muted,
+                )
             }
             RoundAction(
                 if (a.queue.any { it.pid == p.id }) "✓" else "+",
@@ -598,9 +629,40 @@ private fun ProgramRow(a: AppState, p: Program) {
 }
 
 @Composable
+private fun ProgramDescription(goal: String, kind: String, evidence: String) {
+    val measurer = rememberTextMeasurer()
+    val badgeStyle = TextStyle(fontFamily = BodyFont, fontSize = 11.sp)
+    val badgeSize = measurer.measure(evidence, badgeStyle).size
+    val width = with(LocalDensity.current) { (badgeSize.width.toDp() + 24.dp).toSp() }
+    val text = buildAnnotatedString {
+        append(goal)
+        if (evidence.isNotEmpty()) appendInlineContent("evidence", " $evidence")
+    }
+    Text(
+        text,
+        Modifier.padding(top = 4.dp),
+        fontFamily = BodyFont,
+        fontSize = 12.5.sp,
+        lineHeight = 18.125.sp,
+        color = C.ink,
+        inlineContent =
+            if (evidence.isEmpty()) emptyMap()
+            else
+                mapOf(
+                    "evidence" to
+                        InlineTextContent(
+                            Placeholder(width, 23.sp, PlaceholderVerticalAlign.TextCenter)
+                        ) {
+                            Box(Modifier.padding(start = 6.dp)) { EvidenceBadge(kind, evidence) }
+                        }
+                ),
+    )
+}
+
+@Composable
 private fun SessionCard(a: AppState) {
     val q = a.queue
-    CardBox(accent = q.isNotEmpty()) {
+    CardBox(accent = q.isNotEmpty(), radius = 24, gap = 12, insetBorder = true) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Title("Today’s Session", size = 17)
             Spacer(Modifier.weight(1f))
@@ -620,7 +682,7 @@ private fun SessionCard(a: AppState) {
                 ) {
                     Label("+", size = 18, color = C.accent)
                 }
-                Note("แตะ + ที่โปรแกรมด้านล่างเพื่อเพิ่มเข้าเซสชัน")
+                Label("แตะ + ที่โปรแกรมด้านล่างเพื่อเพิ่มเข้าเซสชัน", size = 13, color = C.muted)
             }
         else {
             Timeline(q.flatMap { a.find(it.pid)?.scaled(it.minutes)?.steps ?: emptyList() })

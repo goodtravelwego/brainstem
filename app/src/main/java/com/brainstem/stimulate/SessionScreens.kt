@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.brainstem.stimulate
 
 import android.os.SystemClock
@@ -9,13 +11,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import kotlin.math.*
@@ -44,226 +50,280 @@ fun RunScreen(a: AppState) {
             a.tick(dt.coerceAtMost(.5) * a.speed)
         }
     }
-    val p = C
+    val basePalette = C
+    val dark = basePalette.bg == Dark.bg
+    val p =
+        if (dark)
+            basePalette.copy(
+                ink = Color.White,
+                muted = Color.White.copy(alpha = .6f),
+                accent = Color(0xFFFF8A7A),
+            )
+        else basePalette
+    // Reuse the visual transition's frame invalidation without a second frame loop.
+    // A separate withFrameNanos loop also drives virtual test time while waiting for idle.
+    val realSeconds = remember(wavePhase) { SystemClock.elapsedRealtime() / 1000.0 }
     val headSize = minOf(270.dp, LocalConfiguration.current.screenWidthDp.dp * .7f)
-    Column(
-        Modifier.fillMaxSize()
-            .background(
-                Brush.radialGradient(listOf(p.accent.copy(alpha = .12f), p.bg), radius = 900f)
-            )
-    ) {
+    CompositionLocalProvider(LocalPalette provides p) {
         Column(
-            Modifier.weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Label(
-                if (s.phase.isNotEmpty()) "Closed-loop" else r.plan.programs[s.programIndex].name,
-                modifier = Modifier.fillMaxWidth(),
-                size = 16,
-                display = true,
-                weight = FontWeight.Medium,
-            )
-            Timeline(r.plan.steps, r.index)
-            if (s.phase.isEmpty()) {
-                val fVisual = min(1.0, .5 + .012 * frequencyAt(s, r.stepElapsed))
-                val w = .5 + .5 * sin(wavePhase * 6 * 2 * PI * fVisual)
-                val pulse = if (r.paused) .28 else .35 + .65 * w * w * (3 - 2 * w)
-                val power = (r.level * .1 * s.power / 100.0 * 1.5).coerceIn(.5, 1.0)
-                HeadGlow(
-                    s.pts,
-                    values = s.pts.associateWith { if (r.paused) pulse else power * pulse },
-                    modifier = Modifier.width(headSize).padding(top = 4.dp),
+            Modifier.fillMaxSize().drawBehind {
+                val center = Offset(size.width * .5f, size.height * if (dark) .35f else .30f)
+                val farthestCorner = hypot(size.width * .5f, max(center.y, size.height - center.y))
+                drawRect(
+                    Brush.radialGradient(
+                        0f to Color(if (dark) 0xFF2A1F2B else 0xFFFFEDE8),
+                        (if (dark) .70f else .72f) to Color(if (dark) 0xFF140F16 else 0xFFF6F8F7),
+                        1f to Color(if (dark) 0xFF140F16 else 0xFFF6F8F7),
+                        center = center,
+                        radius = farthestCorner,
+                    )
                 )
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        timeText(r.remaining),
-                        fontSize = 46.sp,
-                        lineHeight = 46.sp,
-                        fontFamily = DisplayFont,
-                        fontWeight = FontWeight.Medium,
-                        color = p.ink,
+            }
+        ) {
+            Column(
+                Modifier.weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 18.dp, end = 18.dp, top = 52.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Label(
+                    if (s.phase.isNotEmpty()) "Closed-loop"
+                    else r.plan.programs[s.programIndex].name,
+                    modifier = Modifier.fillMaxWidth(),
+                    size = 16,
+                    display = true,
+                    weight = FontWeight.Medium,
+                )
+                Timeline(r.plan.steps, r.index, runStyle = true)
+                if (s.phase.isEmpty()) {
+                    val fVisual = min(1.0, .5 + .012 * frequencyAt(s, r.stepElapsed))
+                    val w = .5 + .5 * sin(realSeconds * 2 * PI * fVisual)
+                    val pulse = if (r.paused) .28 else .35 + .65 * w * w * (3 - 2 * w)
+                    val power = (r.level * .1 * s.power / 100.0 * 1.5).coerceIn(.5, 1.0)
+                    HeadGlow(
+                        s.pts,
+                        values = s.pts.associateWith { if (r.paused) pulse else power * pulse },
+                        modifier = Modifier.width(headSize).padding(top = 4.dp),
                     )
-                    Note("remaining")
-                }
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                ) {
-                    Label(
-                        num(frequencyAt(s, r.stepElapsed)),
-                        size = 26,
-                        color = p.accent,
-                        display = true,
-                    )
-                    Label("Hz", size = 14, color = p.muted)
-                }
-                Canvas(Modifier.width(260.dp).height(26.dp)) {
-                    val path = Path()
-                    val cycles = (frequencyAt(s, r.stepElapsed) / 2.2).roundToInt().coerceIn(2, 18)
-                    for (i in 0..260) {
-                        val x = size.width * i / 260
-                        val y =
-                            size.height / 2 +
-                                -sin((i / 260.0 + wavePhase) * cycles * 2 * PI) * 9.dp.toPx()
-                        if (i == 0) path.moveTo(x, y.toFloat()) else path.lineTo(x, y.toFloat())
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            timeText(r.remaining),
+                            modifier =
+                                Modifier.height(46.dp)
+                                    .wrapContentHeight(
+                                        Alignment.CenterVertically,
+                                        unbounded = true,
+                                    ),
+                            letterSpacing = (-1).sp,
+                            fontSize = 46.sp,
+                            lineHeight = 46.sp,
+                            fontFamily = DisplayFont,
+                            fontWeight = FontWeight.Medium,
+                            color = p.ink,
+                        )
+                        Label("remaining", size = 12, color = p.muted)
                     }
-                    drawPath(
-                        path,
-                        Brush.horizontalGradient(
-                            0f to p.accent.copy(alpha = 0f),
-                            .15f to p.accent.copy(alpha = .85f),
-                            .85f to p.accent.copy(alpha = .85f),
-                            1f to p.accent.copy(alpha = 0f),
-                        ),
-                        style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round),
-                    )
-                }
-                Label(s.label, size = 15, weight = FontWeight.Medium, align = TextAlign.Center)
-                if (r.plan.closedLoop) Note("Level ${r.level} · EEG ปิดระหว่างกระตุ้น")
-            } else {
-                Spacer(Modifier.height(30.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    LineIcon("eyeoff", Modifier.size(18.dp), p.ink)
-                    Label("หลับตา", size = 16, weight = FontWeight.Medium)
-                }
-                Note(
-                    "${when(s.phase){"pre"->"Baseline"
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        Label(
+                            num(frequencyAt(s, r.stepElapsed)),
+                            size = 26,
+                            color = p.accent,
+                            display = true,
+                        )
+                        Label("Hz", size = 14, color = p.muted)
+                    }
+                    Canvas(Modifier.width(260.dp).height(26.dp)) {
+                        val path = Path()
+                        val cycles =
+                            (frequencyAt(s, r.stepElapsed) / 2.2).roundToInt().coerceIn(2, 18)
+                        for (i in 0..260) {
+                            val x = size.width * i / 260
+                            val y =
+                                size.height / 2 +
+                                    -sin((i / 260.0 + wavePhase) * cycles * PI) * 9.dp.toPx()
+                            if (i == 0) path.moveTo(x, y.toFloat()) else path.lineTo(x, y.toFloat())
+                        }
+                        drawPath(
+                            path,
+                            Brush.horizontalGradient(
+                                0f to p.accent.copy(alpha = 0f),
+                                .15f to p.accent.copy(alpha = .85f),
+                                .85f to p.accent.copy(alpha = .85f),
+                                1f to p.accent.copy(alpha = 0f),
+                            ),
+                            style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round),
+                        )
+                    }
+                    Label(s.label, size = 15, weight = FontWeight.Medium, align = TextAlign.Center)
+                    if (r.plan.closedLoop) Note("Level ${r.level} · EEG ปิดระหว่างกระตุ้น")
+                } else {
+                    Spacer(Modifier.height(30.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        LineIcon("eyeoff", Modifier.size(18.dp), p.ink)
+                        Label("หลับตา", size = 16, weight = FontWeight.Medium)
+                    }
+                    Note(
+                        "${when(s.phase){"pre"->"Baseline"
 "post"->"After"
 else->"Measure"}} · EEG"
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Note(
-                        when (s.phase) {
-                            "pre" -> "BASELINE"
-                            "post" -> "AFTER"
-                            else -> "MEASURE"
-                        }
                     )
-                    Label("α ${num(r.iapf)} Hz", size = 12, mono = true, color = p.muted)
-                }
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Column(Modifier.fillMaxWidth().aspectRatio(640f / 300f)) {
-                        listOf("F3", "F4", "Fz", "Cz", "Pz").forEachIndexed { i, ch ->
-                            Row(
-                                Modifier.fillMaxWidth().weight(1f),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Label(
-                                    ch,
-                                    Modifier.width(16.dp),
-                                    size = 7,
-                                    color = p.muted,
-                                    mono = true,
-                                )
-                                Canvas(Modifier.weight(1f).fillMaxHeight()) {
-                                    val path = Path()
-                                    for (j in 0..604) {
-                                        val x = size.width * j / 604f
-                                        val t = wavePhase * 6 + j / 220.0
-                                        val phase = i * 1.7
-                                        val envelope = .55 + .45 * sin(2 * PI * .25 * t + phase)
-                                        val posterior =
-                                            if (i == 4) 1.5 else if (i >= 2) 1.25 else .9
-                                        val signal =
-                                            r.eeg[0] *
-                                                posterior *
-                                                envelope *
-                                                sin(2 * PI * r.iapf * t + phase) +
-                                                .45 * r.eeg[2] * sin(2 * PI * 5.5 * t + phase * 2) +
-                                                .22 * r.eeg[1] * sin(2 * PI * 19 * t + i)
-                                        val y = size.height / 2 - signal * size.height * .26
-                                        if (j == 0) path.moveTo(x, y.toFloat())
-                                        else path.lineTo(x, y.toFloat())
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Note(
+                            when (s.phase) {
+                                "pre" -> "BASELINE"
+                                "post" -> "AFTER"
+                                else -> "MEASURE"
+                            }
+                        )
+                        Label("α ${num(r.iapf)} Hz", size = 12, mono = true, color = p.muted)
+                    }
+                    Column(
+                        Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Column(Modifier.fillMaxWidth().aspectRatio(640f / 300f)) {
+                            listOf("F3", "F4", "Fz", "Cz", "Pz").forEachIndexed { i, ch ->
+                                Row(
+                                    Modifier.fillMaxWidth().weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Label(
+                                        ch,
+                                        Modifier.width(16.dp),
+                                        size = 7,
+                                        color = p.muted,
+                                        mono = true,
+                                    )
+                                    Canvas(Modifier.weight(1f).fillMaxHeight()) {
+                                        val path = Path()
+                                        for (j in 0..604) {
+                                            val x = size.width * j / 604f
+                                            val t = realSeconds + j / 220.0
+                                            val phase = i * 1.7
+                                            val envelope = .55 + .45 * sin(2 * PI * .25 * t + phase)
+                                            val posterior =
+                                                if (i == 4) 1.5 else if (i >= 2) 1.25 else .9
+                                            val signal =
+                                                r.eeg[0] *
+                                                    posterior *
+                                                    envelope *
+                                                    sin(2 * PI * r.iapf * t + phase) +
+                                                    .45 *
+                                                        r.eeg[2] *
+                                                        sin(2 * PI * 5.5 * t + phase * 2) +
+                                                    .22 * r.eeg[1] * sin(2 * PI * 19 * t + i)
+                                            val y = size.height / 2 - signal * size.height * .26
+                                            if (j == 0) path.moveTo(x, y.toFloat())
+                                            else path.lineTo(x, y.toFloat())
+                                        }
+                                        drawPath(
+                                            path,
+                                            Brush.horizontalGradient(
+                                                0f to
+                                                    p.accent.copy(alpha = if (i == 4) 1f else .75f),
+                                                .78f to
+                                                    p.accent.copy(alpha = if (i == 4) 1f else .75f),
+                                                1f to p.accent.copy(alpha = 0f),
+                                            ),
+                                            style =
+                                                Stroke(if (i == 4) 1.dp.toPx() else .7.dp.toPx()),
+                                        )
                                     }
-                                    drawPath(
-                                        path,
-                                        Brush.horizontalGradient(
-                                            0f to p.accent.copy(alpha = if (i == 4) 1f else .75f),
-                                            .78f to p.accent.copy(alpha = if (i == 4) 1f else .75f),
-                                            1f to p.accent.copy(alpha = 0f),
-                                        ),
-                                        style = Stroke(if (i == 4) 1.dp.toPx() else .7.dp.toPx()),
+                                }
+                            }
+                        }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            listOf("θ" to 2, "α" to 0, "β" to 1, "hβ" to 3).forEach { (n, i) ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                ) {
+                                    Box(
+                                        Modifier.size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Color(
+                                                    when (i) {
+                                                        2 -> 0xFF8FA6E8
+                                                        0 -> 0xFF6CCFB9
+                                                        1 -> 0xFFF2C14E
+                                                        else -> 0xFFF28B74
+                                                    }
+                                                )
+                                            )
+                                    )
+                                    Label(
+                                        "$n ${if(s.phase=="pre") "—" else r.bands?.get(i)?.roundToInt()?.let{if(it>=0)"+$it%"else"$it%"} ?: "…"}",
+                                        size = 13,
+                                        mono = true,
                                     )
                                 }
                             }
                         }
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        listOf("θ" to 2, "α" to 0, "β" to 1, "hβ" to 3).forEach { (n, i) ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            ) {
-                                Box(
-                                    Modifier.size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Color(
-                                                when (i) {
-                                                    2 -> 0xFF8FA6E8
-                                                    0 -> 0xFF6CCFB9
-                                                    1 -> 0xFFF2C14E
-                                                    else -> 0xFFF28B74
-                                                }
-                                            )
-                                        )
-                                )
-                                Label(
-                                    "$n ${if(s.phase=="pre") "—" else r.bands?.get(i)?.roundToInt()?.let{if(it>=0)"+$it%"else"$it%"} ?: "…"}",
-                                    size = 13,
-                                    mono = true,
-                                )
-                            }
-                        }
-                    }
+                    LinearProgressIndicator(
+                        progress = { (r.stepElapsed / s.dur).toFloat() },
+                        modifier = Modifier.fillMaxWidth().height(2.dp),
+                        color = p.accent,
+                        trackColor = p.line,
+                    )
                 }
-                LinearProgressIndicator(
-                    progress = { (r.stepElapsed / s.dur).toFloat() },
-                    modifier = Modifier.fillMaxWidth().height(2.dp),
-                    color = p.accent,
-                    trackColor = p.line,
-                )
             }
-        }
-        Row(
-            Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Box(
-                Modifier.weight(1f)
-                    .height(54.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(p.surface)
-                    .border(1.dp, p.line, RoundedCornerShape(18.dp))
-                    .clickable { a.pause() },
-                contentAlignment = Alignment.Center,
+            Row(
+                Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 26.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Label(if (r.paused) "Resume" else "Pause", size = 16, weight = FontWeight.Medium)
-            }
-            Box(
-                Modifier.weight(1f)
-                    .height(54.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(p.accent.copy(alpha = .12f))
-                    .clickable { a.finish(false) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Label(
-                    "Stop",
-                    size = 16,
-                    color = if (p == Dark) Color(0xFFFF8A7A) else Color(0xFFB23E2C),
-                    weight = FontWeight.Medium,
-                )
+                Box(
+                    Modifier.weight(1f)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (dark) Color.White.copy(alpha = .1f) else p.surface)
+                        .border(
+                            1.dp,
+                            if (dark) Color.Transparent else p.line,
+                            RoundedCornerShape(18.dp),
+                        )
+                        .clickable { a.pause() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Label(
+                        if (r.paused) "Resume" else "Pause",
+                        size = 16,
+                        weight = FontWeight.Medium,
+                    )
+                }
+                Box(
+                    Modifier.weight(1f)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(
+                            if (dark) Color(0xFFE8735E).copy(alpha = .2f)
+                            else Color(0xFFD9533F).copy(alpha = .12f).compositeOver(p.surface)
+                        )
+                        .clickable { a.finish(false) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Label(
+                        "Stop",
+                        size = 16,
+                        color = if (dark) Color(0xFFFFB4A6) else Color(0xFFB23E2C),
+                        weight = FontWeight.Medium,
+                    )
+                }
             }
         }
     }
@@ -280,17 +340,17 @@ fun SummaryScreen(a: AppState) {
     }
     ScreenColumn("summary") {
         Column(
-            Modifier.fillMaxWidth().padding(top = 12.dp),
+            Modifier.fillMaxWidth().padding(top = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Box(
-                Modifier.size(56.dp).clip(CircleShape).background(C.accent.copy(alpha = .14f)),
+                Modifier.size(56.dp).clip(CircleShape).background(C.accent.copy(alpha = .16f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Label(if (r.complete) "✓" else "–", size = 27, color = C.accent)
+                Label("✓", size = 26, color = C.accent)
             }
-            Title(if (r.complete) "Session Complete" else "Stopped Early", size = 23)
+            Title(if (r.complete) "Session Complete" else "Stopped Early", size = 24)
             Note(r.items.joinToString(" → ") { it.name })
         }
         val used = r.dose.values.filter { it > 0 }
@@ -304,48 +364,97 @@ fun SummaryScreen(a: AppState) {
             )
         )
         if (r.closedLoop && r.deltas.isNotEmpty())
-            CardBox(padding = 14) {
+            CardBox(padding = 14, topPadding = 12, bottomPadding = 12, radius = 18, gap = 8) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Label("EEG · Alpha", weight = FontWeight.Medium)
                     Note("IAPF ${num(r.iapf)} Hz")
                 }
-                Label(
-                    "${if(r.deltas[0]>=0)"+"else""}${r.deltas[0].roundToInt()}%",
-                    size = 34,
-                    display = true,
-                )
-                Note(
-                    if (abs(r.deltas[0]) < 10) "อยู่ในช่วงปกติ ±10%"
-                    else if (r.deltas[0] > 0) "เพิ่มขึ้น" else "ลดลง"
-                )
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        "${if(r.deltas[0]>0)"+"else""}${r.deltas[0].roundToInt()}%",
+                        fontFamily = DisplayFont,
+                        modifier =
+                            Modifier.height(34.dp)
+                                .wrapContentHeight(Alignment.CenterVertically, unbounded = true),
+                        fontSize = 34.sp,
+                        lineHeight = 34.sp,
+                        color = if (r.deltas[0] >= 10) C.ok else C.ink,
+                    )
+                    val big = abs(r.deltas[0]) >= 10
+                    Label(
+                        if (!big) "อยู่ในช่วงปกติ ±10%"
+                        else if (r.deltas[0] > 0) "เพิ่มขึ้น" else "ลดลง",
+                        Modifier.clip(CircleShape)
+                            .background(if (big) C.ok.copy(alpha = .14f) else C.surface2)
+                            .padding(horizontal = 9.dp, vertical = 2.dp),
+                        size = 11.5,
+                        color = if (big) C.ok else C.muted,
+                    )
+                }
                 val p = C
-                Canvas(Modifier.fillMaxWidth().height(84.dp)) {
+                val measurer = rememberTextMeasurer()
+                val axisStyle = TextStyle(fontFamily = BodyFont, fontSize = 10.sp, color = p.muted)
+                val beforeLabel = measurer.measure("ก่อน", axisStyle)
+                val afterLabel = measurer.measure("หลัง", axisStyle)
+                Canvas(Modifier.fillMaxWidth().aspectRatio(300f / 84f)) {
                     val values = listOf(0.0) + r.alphaTrace
                     val maxVal = max(15.0, values.maxOf { abs(it) })
+                    val scale = size.width / 300f
+                    fun x(i: Int) = (14f + i * 272f / max(1, values.size - 1)) * scale
+                    fun y(v: Double) = (42f - v / maxVal * 30f).toFloat() * scale
                     drawLine(
                         p.line,
-                        Offset(0f, size.height / 2),
-                        Offset(size.width, size.height / 2),
-                        1.dp.toPx(),
+                        Offset(10 * scale, size.height / 2),
+                        Offset(290 * scale, size.height / 2),
+                        scale,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(3 * scale, 3 * scale)),
+                    )
+                    drawRect(
+                        p.muted.copy(alpha = .08f),
+                        Offset(10 * scale, y(10.0)),
+                        androidx.compose.ui.geometry.Size(280 * scale, y(-10.0) - y(10.0)),
                     )
                     val path = Path()
                     values.forEachIndexed { i, v ->
-                        val x = i * size.width / max(1, values.size - 1)
-                        val y = size.height / 2 - (v / maxVal * size.height * .4).toFloat()
-                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                        drawCircle(p.accent, 3.dp.toPx(), Offset(x, y))
+                        if (i == 0) path.moveTo(x(i), y(v)) else path.lineTo(x(i), y(v))
                     }
-                    drawPath(path, p.accent, style = Stroke(2.dp.toPx()))
+                    drawPath(path, p.accent, style = Stroke(2 * scale, join = StrokeJoin.Round))
+                    values.forEachIndexed { i, v ->
+                        drawCircle(
+                            p.accent,
+                            (if (i == values.lastIndex) 4f else 2.6f) * scale,
+                            Offset(x(i), y(v)),
+                        )
+                    }
+                    drawText(
+                        beforeLabel,
+                        topLeft = Offset(x(0), size.height - 2 * scale - beforeLabel.size.height),
+                    )
+                    drawText(
+                        afterLabel,
+                        topLeft =
+                            Offset(
+                                x(values.lastIndex) - afterLabel.size.width,
+                                size.height - 2 * scale - afterLabel.size.height,
+                            ),
+                    )
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Note("ก่อน")
-                    Note("หลัง")
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     listOf("β" to 1, "θ" to 2, "high-β" to 3).forEach { (n, i) ->
                         Label(
                             "$n ${if(r.deltas[i]>=0)"+"else""}${r.deltas[i].roundToInt()}%",
-                            size = 12,
+                            modifier =
+                                Modifier.clip(RoundedCornerShape(10.dp))
+                                    .background(p.surface2)
+                                    .padding(horizontal = 9.dp, vertical = 4.dp),
+                            size = 12.5,
+                            color = if (i == 3 && r.deltas[i] > 20) Color(0xFF9A6200) else p.ink,
                             mono = true,
                         )
                     }
@@ -385,11 +494,12 @@ fun StatTiles(items: List<Pair<String, String>>) {
                     .clip(RoundedCornerShape(16.dp))
                     .background(C.surface)
                     .border(1.dp, C.line, RoundedCornerShape(16.dp))
-                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                    .padding(vertical = 11.dp, horizontal = 7.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Label(v, size = 20, display = true)
-                Label(l, size = 10, color = C.muted, align = TextAlign.Center)
+                Label(l, size = 11, color = C.muted, align = TextAlign.Center)
             }
         }
     }
