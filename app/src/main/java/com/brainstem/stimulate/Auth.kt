@@ -26,6 +26,8 @@ class Auth(private val context: Context) {
     private val prefs = context.getSharedPreferences("account", Context.MODE_PRIVATE)
     private val alias = "brainstem.auth.v1"
     private val redirect = cfg.getString("redirect")
+    private val emailRedirect =
+        cfg.optString("emailRedirect", "https://brainstem-monitor.netlify.app/app/")
     var photoUploadFailed = false
         private set
 
@@ -197,8 +199,7 @@ class Auth(private val context: Context) {
             val j =
                 JSONObject(
                     call(
-                        "/auth/v1/signup?redirect_to=" +
-                            Uri.encode("https://brainstem-monitor.netlify.app/app/"),
+                        "/auth/v1/signup?redirect_to=" + Uri.encode(emailRedirect),
                         "POST",
                         JSONObject().put("email", email).put("password", password),
                     )
@@ -210,8 +211,7 @@ class Auth(private val context: Context) {
     suspend fun recover(email: String) =
         withContext(Dispatchers.IO) {
             call(
-                "/auth/v1/recover?redirect_to=" +
-                    Uri.encode("https://brainstem-monitor.netlify.app/app/"),
+                "/auth/v1/recover?redirect_to=" + Uri.encode(emailRedirect),
                 "POST",
                 JSONObject().put("email", email),
             )

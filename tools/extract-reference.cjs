@@ -10,5 +10,5 @@ fs.writeFileSync('app/src/main/assets/programs.json', sandbox.result);
 const shell=fs.readFileSync('reference-app.html','utf8');
 const url=shell.match(/const AU_SB=\{url:'([^']+)'/)[1];
 const key=shell.match(/const AU_SB=\{url:'[^']+',key:'([^']+)'/)[1];
-fs.writeFileSync('app/src/main/assets/backend.json',JSON.stringify({url,key,redirect:'brainstem://auth/callback'}));
+fs.writeFileSync('app/src/main/assets/backend.json',JSON.stringify({url,key,redirect:'brainstem://auth/callback',emailRedirect:'https://brainstem-monitor.netlify.app/app/'}));
 console.log('Extracted '+JSON.parse(sandbox.result).programs.length+' public Stimulate programs.');

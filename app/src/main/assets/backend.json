@@ -1,1 +1,6 @@
-{"url":"https://rsabqfxkaykltxngtjzy.supabase.co","key":"sb_publishable__gMD-0O6BHdIfjIVe6V49Q_5_IBvZjB","redirect":"brainstem://auth/callback"}
+{
+  "url": "https://rsabqfxkaykltxngtjzy.supabase.co",
+  "key": "sb_publishable__gMD-0O6BHdIfjIVe6V49Q_5_IBvZjB",
+  "redirect": "brainstem://auth/callback",
+  "emailRedirect": "https://brainstem-monitor.netlify.app/app/"
+}
