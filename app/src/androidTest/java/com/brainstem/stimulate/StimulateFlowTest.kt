@@ -85,6 +85,9 @@ class StimulateFlowTest {
             state.customs.clear()
             state.favorites.clear()
             state.pro = false
+            state.speed = 20
+            state.spec = Spec()
+            state.closedLoop = false
             state.theme = "light"
             state.screen = Screen.HOME
             state.category = "relax"

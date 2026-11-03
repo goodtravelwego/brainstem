@@ -15,7 +15,7 @@ Reference: signed-in public web app, Stimulate module, inspected 2026-11-02. Nat
 | Closed-loop | Source response/noise model, light-off sampling, baseline/after averages, stress-triggered level reduction | Plan/dose and seeded replay tests; complete emulator session and EEG summary |
 | History | Thai month calendar, daily records, monthly totals, Repeat | Emulator flow + persistence |
 | Settings | Easy/Pro, speed, helmet values, theme, profiles/account | Build + emulator screenshots |
-| Native lifecycle | Retains ViewModel during rotation; saves on background, restores paused | Implemented; process-death/device coverage remains limited |
+| Native lifecycle | Retains ViewModel during rotation; saves on background, restores paused | Device assertions for activity recreation and preferences reload, including continued dose/EEG; actual OS process-kill coverage remains limited |
 | Login | Existing Supabase email endpoints; browser OAuth with PKCE | Compiled; real account flow requires user verification |
 | Profiles | Full native form, birth/age, guardian details, consent, camera/gallery, local/cloud save | Local validation/edit/persistence emulator flow; cloud and image providers need real-account/device verification |
 
