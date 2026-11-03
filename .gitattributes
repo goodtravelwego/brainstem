@@ -2,6 +2,7 @@
 *.txt text eol=lf
 *.html text eol=lf
 .gitignore text eol=lf
+.editorconfig text eol=lf
 .gitattributes text eol=lf
 *.properties text eol=lf
 *.kt text eol=lf
@@ -12,9 +13,11 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.cjs text eol=lf
+*.sql text eol=lf
 *.ps1 text eol=crlf
 gradlew text eol=lf
 gradlew.bat text eol=crlf
 *.png binary
+*.jpg binary
 *.ttf binary
 *.jar binary

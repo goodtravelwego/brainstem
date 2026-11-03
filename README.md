@@ -9,6 +9,8 @@ An Android Studio project written in Kotlin and Jetpack Compose, based on the St
 3. Select the `app` configuration and an emulator or Android phone, then Run.
 4. The login page opens first. **ใช้แบบไม่ล็อกอิน (เก็บในเครื่องนี้)** opens the complete offline simulator without an account.
 
+Without opening Android Studio: see [install/run instructions](docs/run-without-android-studio.md). For later backend access: see [database setup](docs/database-setup.md).
+
 Minimum Android version: Android 8.0 (API 26). Debug APK: `app/build/outputs/apk/debug/app-debug.apk`.
 
 On this computer `local.properties` already points to the installed SDK. On another computer, let Android Studio generate that file for its own SDK location.
@@ -38,7 +40,7 @@ Confirmation/reset email links return to the existing website, whose redirect is
 
 Evaluate-dependent alpha measurement is outside this project's scope. Presets use their reference default frequencies. The Alpha card is informational; the 7-day strip opens Stimulate history, since Map was excluded.
 
-This is a native recreation of the inspected Stimulate flows, not a claim of completed pixel-by-pixel or hardware/backend parity. Android system bars replace the website's decorative phone bezel/status bar. There is no bottom navigation menu; the app opens directly to the Stimulate main screen after login. See `docs/parity-audit-2026-11-02.md` for the checked differences, corrections, and remaining gaps, and `docs/parity.md` for scope changes.
+The requested Stimulate flows are implemented and have undergone a second visual comparison at a 372 dp app width. Native font rasterization, system insets, browser scrollbars, and OS pickers still differ between platforms; no pixel-identical rendering or live hardware/backend validation is claimed. Android system bars replace the website's decorative phone bezel/status bar. There is no bottom navigation menu; the app opens directly to the Stimulate main screen after login. See `docs/parity-audit-2026-11-02.md` for the checked differences, corrections, and external dependencies, and `docs/parity.md` for scope changes.
 
 ## Build and check
 
@@ -48,11 +50,11 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 .\gradlew.bat :app:connectedVerificationAndroidTest
 ```
 
-Verified on 2 November 2026: debug APK build, nine unit tests, lint, and the Android 17/API 37 emulator flow. The tests cover dose, timing, pause, sweeps, scaling, headset checks, and seeded EEG replay. The device flow covers categories, favorite/queue, Quick Start, headset checks, pause/completion, history, builder, Repeat, dark mode, profile validation/edit/persistence, and a complete closed-loop session. It never signs into a real account. Its separate verification application ID preserves the normal debug app's local data.
+Verified on 2–3 November 2026: debug APK build, ten unit tests, lint, and the Android 17/API 37 emulator flow. The tests cover dose, timing, pause, sweeps, scaling, headset checks, and seeded EEG replay. The device flow covers categories, favorite/queue, Quick Start, headset checks, pause/completion, history, builder, Repeat, dark mode, profile validation/edit/persistence, and a complete closed-loop session. It never signs into a real account. Its separate verification application ID preserves the normal debug app's local data.
 
-Fifteen emulator screenshots are in `docs/screenshots`. The test writes new screenshots to Gradle's additional-test-output directory, under `app/build/outputs/connected_android_test_additional_output`.
+Twenty-one emulator screenshots are in `docs/screenshots`. The test writes new screenshots to Gradle's additional-test-output directory, under `app/build/outputs/connected_android_test_additional_output`.
 
-The current captures use a compact 320×640 display. Session controls stay visible in a fixed bottom row while the content scrolls; the EEG scope scales with screen width. This layout is covered by explicit Pause/Resume visibility and state assertions.
+The current captures use a 372×848 display at mdpi, with a 372×800 application area inside system insets. A second flow run checks the compact 320×640 application area. Session controls stay visible in a fixed bottom row while the content scrolls; the EEG scope scales with screen width. This layout is covered by explicit Pause/Resume visibility and state assertions.
 
 Run `powershell -ExecutionPolicy Bypass -File tools/package-android.ps1` to build/export the debug APK and Android Studio source ZIP. It exports reviewed tracked source files and excludes local configuration/caches. After an existing build, `-SkipBuild` only exports the artifacts.
 
@@ -62,7 +64,7 @@ Run `powershell -ExecutionPolicy Bypass -File tools/package-android.ps1` to buil
 - `Repository.kt`: static program loading and local JSON persistence.
 - `Auth.kt`: Supabase HTTP calls, PKCE, token encryption and refresh.
 - `AppState.kt`: profile-scoped state and app actions.
-- `Components.kt`: typography, palette, controls, icon paths, native head diagram.
+- `Components.kt` / `ReferenceIcons.kt`: typography, palette, controls, native head diagram, and 28 vectors converted from the reference SVG paths.
 - `App.kt`, `ProgramScreens.kt`, `SessionScreens.kt`, `SettingsScreens.kt`, `ProfileScreens.kt`: native screens.
 - `CompletionChime.kt`: PCM synthesis of the reference's four-note completion sound.
 - `reference/pbm.html`: downloaded public PBM reference, retained for comparison only and never embedded in Android.

@@ -7,7 +7,7 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
-[*.{kt,kts,xml,json,md,yml,yaml,cjs,properties,html}]
+[*.{kt,kts,xml,json,md,yml,yaml,cjs,properties,html,sql}]
 end_of_line = lf
 
 [*.{yml,yaml,json,cjs}]

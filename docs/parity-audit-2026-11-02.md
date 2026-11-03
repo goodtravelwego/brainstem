@@ -1,6 +1,6 @@
 # Stimulate comparison — 2 November 2026
 
-**Result: closer to the reference after corrections, but full 1:1 UI/UX parity is not certified.** The bottom menu remains removed, as requested.
+**Result: the requested native Stimulate flows are implemented, with the second comparison and corrections below completed.** The bottom menu remains removed, as requested. Real-account authentication/cloud/provider checks require the backend owner or a real device and are listed separately. Native rendering is not a pixel-identical web renderer.
 
 The original signed-in Stimulate module was inspected through its rendered DOM, computed styles, visible controls, and public source. The native app was checked through emulator screenshots and an isolated instrumentation build. Its main program data was compared against a fresh download of the public website, not only the earlier local reference.
 
@@ -33,27 +33,56 @@ The machine-readable result is in [reference-data-audit.json](reference-data-aud
 | Simulated battery | Session drain truncated elapsed five-minute units | Uses the reference's nearest-unit rounding with a minimum drain of one |
 | Small-screen session controls | EEG measurement content placed Resume/Stop below the visible area on a 320×640 display | Controls stay in a fixed bottom row; only session content scrolls. The EEG chart now uses the source's 640:300 aspect ratio and the head scales to 70% of screen width |
 
+## Second visual comparison and corrections
+
+The comparison emulator uses **372×848 at mdpi**, giving a **372×800 app area** after Android's top/bottom insets. The reference iframe was sized to a 372 CSS-pixel body; its desktop scrollbar sometimes requires a 387-pixel viewport. Comparisons use the content area, not the website's bottom menu or Android system bars. Screenshots are retained in [comparison](comparison) and [screenshots](screenshots). Browser JPEG captures and native PNGs are not suitable for a strict zero-pixel-difference assertion; geometry was also inspected through source DOM bounds and native semantic bounds.
+
+| Area | Correction in this pass |
+|---|---|
+| Palette | Corrected page background to source E9EFEC / 0A1110 rather than the separate app-bezel background |
+| Shared geometry | Corrected header position, card borders/radii/padding/gaps, fractional note sizing, battery, and grouped seven-day dots |
+| Reference icons | Converted all 28 source SVG icons to Android vector resources, including previously missing edit/copy/delete/bulb/clock icons |
+| Home | Corrected small info icons, program subtitles, evidence colors, Alpha card dash/spacing, Pro new-program action sizing, and FAB shadow |
+| Weekly total | Matched per-day minute rounding before summing the week; added a regression covering small sessions, older sessions, and future dates |
+| Quick Start | Restored its white selected mode tab, grouped All/Clear controls, 20 sp counter, head-card gradient, 48 dp frequency controls, logarithmic range track, sweep bar, and divided option rows in source order |
+| Number layout | Constrained large frequency/time/Alpha line boxes to the source height; Android's natural font metrics had expanded the frequency number to 92 px despite a 58 sp requested line height |
+| Builder | Recreated expanded/collapsed step cards, number markers, inline tools, compact frequency controls, band-color chips, duration/power columns, duty row, and dashed Add Step |
+| Builder save | Avoided overwriting a newer draft with a stale captured object when the name field reports an edit; device assertions now cover add/duplicate/up/down/delete/duration/save |
+| Program detail | Corrected title/subtitle grouping, selected step rows, region captions from the exact source data, multi-step timelines/gradients, and About/reference disclosure geometry |
+| Settings | Recreated small section headings, feature chips, 2-column helmet fields and native numeric inputs |
+| Profiles | Changed profile switching to a bottom sheet with account row, per-profile avatar colors, selected border, and edit/new-user actions |
+| Running | Restored light/dark radial backgrounds, dark control colors, fixed control positions, timeline outline, continuous head/EEG animation time, and the source wave's doubled SVG viewport scale |
+| Summary | Corrected completion block, tile sizing, Alpha/status/band chips, and 300:84 chart geometry with normal-range shade, dashed zero line, endpoint markers, and labels inside the plot |
+| History | Corrected calendar spacing/type/dots, record cards, and the single shared monthly-total container |
+
+After the 2 November comparison, the original reference was left in Easy mode with Quick Start restored to Fixed 10 Hz, all points, 10 minutes. The reference simulation test added one one-minute **local simulated session** and drained its simulated battery by one; it did not write a cloud profile or control a helmet.
+
 ## Verification
 
+Follow-up on **3 November 2026**, addressing the two marked browser comments:
+
+- Program info now has the reference's filled ink/white selected state. Description text uses ink, a 4 dp top margin, 12.5 sp / 1.45 typography, and an inline evidence badge. The test opens/closes it and verifies that the app remains on Home.
+- Builder up/down/copy/delete controls use the exact vector paths, 30×30 dp containers and 9 dp corners. Copy/delete icons are 15 dp; arrows are 16 dp. A disabled control fades as a whole to 30%, including its background. Delete is disabled for one step, enabled after duplication, and disabled again after deleting back to one step; device assertions cover those transitions.
+- The same pass corrected the builder's 130 dp mode selector and 38 dp / 22 sp fixed-frequency and duty controls. Compact duration controls distribute their available width, preserving the full button width.
+- The original browser draft, **Alpha Calm (copy)**, was preserved. A separate temporary reference tab was used to inspect info behavior, then closed.
+
 - Debug APK build: **passed**.
-- Unit tests: **9 passed**, covering dose, step boundaries, pause, sweeps, proportional duration, closed-loop timing, headset gating, seeded replay, and frequency-dependent light-off EEG sampling.
+- Unit tests: **10 passed**, covering dose, step boundaries, pause, sweeps, proportional duration, closed-loop timing, headset gating, seeded replay, and frequency-dependent light-off EEG sampling.
 - Android 17 / API 37 instrumentation flow: **passed**. It covers categories, favorites, queue, all/clear selection, sweep presets, first and repeated headset checks, pause/resume/completion, history, descending builder sweep, custom-program creation, Repeat regression, and dark mode.
 - Android lint: **0 errors**; warnings include dependency updates, deprecated platform APIs, and small-screen layout advice.
-- Fifteen current screenshots: [screenshots](screenshots), including native profile editing, baseline measurement, and closed-loop summary.
+- Twenty-one current screenshots: [screenshots](screenshots), including native profile editing, baseline measurement, and closed-loop summary.
 
 Instrumentation now uses `com.brainstem.stimulate.verification`, keeping the normal debug app's saved data separate. It does not log into or modify a real online account.
 
-## Remaining differences and limits
+## Platform boundaries and external validation
 
-1. **Visuals and motion:** an automated pixel-difference comparison at identical logical dimensions has not been completed. The inspected web phone had a 372×800 CSS-pixel screen; the emulator uses a different logical size and native system insets. Inline evidence badges, elliptical clipped head glow, six-second masked frequency wave, input styling, and the four-note synthesized completion sound have now been aligned to the source. Some spacing, gradients, scope animation, profile sheet presentation, date/camera controls, and native system rendering still need matching-size visual review. Passing interaction tests is not proof of pixel-perfect output.
-2. **EEG simulation:** the source's randomized IAPF/response targets, rest, noise/stress spikes, light-off sampling, baseline/after means, and intensity reduction are now ported. Android uses fixed 100 ms simulation increments and a persisted seed so restoration is reproducible. Random streams and frame timing are platform-specific; numerical readings are not expected to match a separate web session. Neither the inspected website nor this build demonstrates a live helmet connection.
-3. **Account flow:** email endpoints compile, but real-account login/signup/reset was not exercised. Google needs `brainstem://auth/callback` allowlisted by the Supabase owner. The user has no backend administration access. Confirmation/reset email links deliberately use the existing approved website, followed by email/password login in Android; direct native email return is not available without owner configuration.
-4. **Profiles:** native onboarding/add/edit forms, validation, all demographic/guardian fields, camera/gallery/removal controls, 128×128 JPEG conversion, online consent, cloud create/update, authenticated photo download/upload/removal, and local fallback on photo failure are implemented. Local validation/edit/persistence passed on the emulator. Real-account cloud writes and actual camera/gallery providers remain unverified. The profile UI uses Android's date picker and image-provider intents.
-5. **Shared/excluded modules:** Evaluate-dependent IAPF, clinic assignments managed through the original shared shell, and their related data paths are not reproduced. The original activity records are browser-local; they are not automatically the Android installation's records.
+- **Native rendering:** the app is Kotlin/Compose. Android font rasterization, rounding, system bars, date picker, photo provider, and responsive behavior differ from browser rendering. The source desktop scrollbar also affects viewport-relative run-head sizing. The second pass inspected representative same-width layouts and corrected the concrete differences above; it does not establish byte-for-byte pixel equality across operating systems. The intentional bottom-menu removal also changes bottom anchoring.
+- **Simulator:** both the inspected web module and Android use simulated helmet/EEG behavior. Android retains fixed 100 ms engine increments and a persisted seed for reproducible restoration. Random readings and frame timing differ between separate sessions/platforms. No live helmet connection is claimed.
+- **Authentication:** email endpoints, Google PKCE, token refresh and encrypted token storage are implemented. No real account credentials were used in verification. Google needs the backend owner to allow `brainstem://auth/callback`; the requester has no Supabase administration access. Email confirmation/reset uses the configured HTTPS `emailRedirect`, followed by Android email/password sign-in.
+- **Profiles:** full fields, local validation/edit/persistence, avatar conversion, consent, cloud profile requests and private photo requests are implemented. Local tests pass. Actual cloud writes, Google return, refresh across a real sign-in, and camera/gallery providers require real-account/device validation. [Database setup](database-setup.md) explains the existing-project owner change and supplies an unexecuted new-project starter schema with ownership policies.
+- **Excluded/shared modules:** Train, Evaluate, Map and clinic remote management are outside the requested implementation. The Alpha card explains default-frequency use, and the seven-day strip opens Stimulate History. Browser-local history is not imported and cross-device activity synchronization is not added.
 
-The requested menu removal, direct opening of Stimulate, native system bars, and routing the seven-day strip to Stimulate History are deliberate scope changes rather than accidental omissions.
-
-Do not describe this build as a complete 1:1 copy based on these checks. The verified statement is: **exact preset data, tested main Stimulate flows, and the corrections above; remaining differences explicitly listed.**
+Build success and passing interaction tests are reported as build/behavior evidence, not as proof of universal pixel equality or a verified backend integration.
 
 ## Git delivery
 

@@ -4,12 +4,12 @@ Reference: signed-in public web app, Stimulate module, inspected 2026-11-02. Nat
 
 | Reference area | Android implementation | Verification |
 |---|---|---|
-| Colors and typography | Reference light/dark colors; bundled Mitr / IBM Plex fonts | Emulator screenshots |
+| Colors and typography | Reference light/dark colors; bundled Mitr / IBM Plex fonts | 372 dp comparison + emulator screenshots |
 | Preset library | All 11 visible programs; the disabled Sharp & Active preset is excluded | Static extraction from reference source |
 | Program detail | Head/step map, timelines, descriptions, evidence, favorites, time, intensity, start/session | Emulator flow + source comparison |
 | Session queue | Add/remove, order, per-item durations, intensity, closed-loop, Start Session, Repeat | Emulator flow; dose/timing unit tests |
 | Quick Start | 19-point selection, regions, fixed/sweep, presets, logarithmic slider, guides, save | Emulator flow + screenshot |
-| Custom builder | Step editing, point masks, frequency, power/duty, reorder, duplicate/delete/save | Emulator creation/editing flow |
+| Custom builder | Step editing, point masks, frequency, power/duty, reorder, duplicate/delete/save | Device assertions for create/add/duplicate/reorder/delete/duration/save |
 | Running session | Countdown, selected points, wave, pause/resume, stop, completion | Emulator pause/completion + engine unit tests |
 | Energy summary | Per-point J/cm², average/maximum, intensity and duration | Dose unit tests + emulator screenshot |
 | Closed-loop | Source response/noise model, light-off sampling, baseline/after averages, stress-triggered level reduction | Plan/dose and seeded replay tests; complete emulator session and EEG summary |
@@ -36,4 +36,6 @@ Reference: signed-in public web app, Stimulate module, inspected 2026-11-02. Nat
 - Live helmet BLE service/characteristics and firmware contract, before replacing simulation.
 - A backend activity API and migration contract, if shared web/Android session history is required.
 
-Pixel-perfect parity has not been certified. See [the detailed audit](parity-audit-2026-11-02.md) for measured differences, fixes, test evidence, and remaining gaps. Static data for all 11 presets / 23 steps was independently compared with a fresh public-source download; see [the data audit](reference-data-audit.json).
+The requested native Stimulate implementation and the visual corrections found in the second comparison are delivered. Native font rasterization, OS providers/system insets, browser scrollbar behavior, and randomized EEG readings differ by platform. Real-account verification and backend-owner configuration are separate external dependencies. See [the detailed audit](parity-audit-2026-11-02.md) for comparison evidence and those boundaries. Static data for all 11 presets / 23 steps was independently compared with a fresh public-source download; see [the data audit](reference-data-audit.json).
+
+For backend configuration, see [database setup](database-setup.md). For APK/command-line testing, see [run without Android Studio](run-without-android-studio.md).
