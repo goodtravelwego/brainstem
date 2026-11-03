@@ -3,6 +3,7 @@ package com.brainstem.stimulate
 import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.*
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlin.math.roundToInt
@@ -147,7 +148,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
     }
 
     fun save() {
-        repo.prefs.edit().putString("scope", scopeKey).apply()
+        repo.prefs.edit { putString("scope", scopeKey) }
         repo.put(
             dataKey(),
             JSONObject()
@@ -197,7 +198,10 @@ class AppState(app: Application) : AndroidViewModel(app) {
 
     fun guest() {
         scopeKey = "guest"
-        repo.prefs.edit().putBoolean("guest", true).putString("scope", scopeKey).apply()
+        repo.prefs.edit {
+            putBoolean("guest", true)
+            putString("scope", scopeKey)
+        }
         load()
         loggedIn = true
     }
@@ -266,7 +270,10 @@ class AppState(app: Application) : AndroidViewModel(app) {
     private suspend fun afterLogin() {
         val fetched = auth.profiles()
         scopeKey = auth.accountId()
-        repo.prefs.edit().putString("scope", scopeKey).putBoolean("guest", false).apply()
+        repo.prefs.edit {
+            putString("scope", scopeKey)
+            putBoolean("guest", false)
+        }
         load()
         val cloud =
             fetched.map { p ->
@@ -312,7 +319,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
             try {
                 auth.signOut()
             } catch (_: Exception) {}
-            repo.prefs.edit().putBoolean("guest", false).apply()
+            repo.prefs.edit { putBoolean("guest", false) }
             loggedIn = false
             mailEmail = ""
             profileOpen = false

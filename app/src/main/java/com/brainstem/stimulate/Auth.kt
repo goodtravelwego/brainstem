@@ -5,6 +5,8 @@ import android.net.Uri
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.KeyStore
@@ -53,13 +55,13 @@ class Auth(private val context: Context) {
 
     private fun encryptedSave(session: JSONObject?) {
         if (session == null) {
-            prefs.edit().remove("session").apply()
+            prefs.edit { remove("session") }
             return
         }
         val cipher =
             Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
         val bytes = cipher.iv + cipher.doFinal(session.toString().toByteArray(Charsets.UTF_8))
-        prefs.edit().putString("session", Base64.encodeToString(bytes, Base64.NO_WRAP)).apply()
+        prefs.edit { putString("session", Base64.encodeToString(bytes, Base64.NO_WRAP)) }
     }
 
     private fun session(): JSONObject? =
@@ -222,17 +224,17 @@ class Auth(private val context: Context) {
         val bytes = ByteArray(32).apply { SecureRandom().nextBytes(this) }
         val verifier =
             Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-        prefs
-            .edit()
-            .putString("pkce", verifier)
-            .putLong("pkceAt", System.currentTimeMillis())
-            .apply()
+        prefs.edit {
+            putString("pkce", verifier)
+            putLong("pkceAt", System.currentTimeMillis())
+        }
         val challenge =
             Base64.encodeToString(
                 MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()),
                 Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP,
             )
-        return Uri.parse(cfg.getString("url") + "/auth/v1/authorize")
+        return (cfg.getString("url") + "/auth/v1/authorize")
+            .toUri()
             .buildUpon()
             .appendQueryParameter("provider", "google")
             .appendQueryParameter("redirect_to", redirect)
@@ -261,7 +263,10 @@ class Auth(private val context: Context) {
                     )
                 )
             } finally {
-                prefs.edit().remove("pkce").remove("pkceAt").apply()
+                prefs.edit {
+                    remove("pkce")
+                    remove("pkceAt")
+                }
             }
         }
 

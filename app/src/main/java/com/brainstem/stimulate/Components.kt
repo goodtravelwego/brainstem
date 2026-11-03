@@ -250,8 +250,8 @@ fun RoundAction(
 @Composable
 fun Pill(
     text: String,
-    selected: Boolean = false,
     modifier: Modifier = Modifier,
+    selected: Boolean = false,
     onClick: () -> Unit,
 ) {
     Box(
@@ -273,7 +273,7 @@ fun ChipRow(items: List<String>, selected: String, onClick: (String) -> Unit) {
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        items.forEach { Pill(it, it == selected) { onClick(it) } }
+        items.forEach { Pill(it, selected = it == selected) { onClick(it) } }
     }
 }
 
@@ -594,8 +594,8 @@ fun OptionRow(label: String, content: @Composable () -> Unit) {
 @Composable
 fun Timeline(
     steps: List<Step>,
-    selected: Int = -1,
     modifier: Modifier = Modifier,
+    selected: Int = -1,
     runStyle: Boolean = false,
     big: Boolean = false,
 ) {
@@ -706,12 +706,12 @@ val ICONS =
     )
 
 @Composable
-fun LineIcon(name: String, modifier: Modifier = Modifier.size(22.dp), color: Color = C.accent) {
+fun LineIcon(name: String, modifier: Modifier = Modifier, color: Color = C.accent) {
     REFERENCE_ICONS[name]?.let { resource ->
         Icon(
             painterResource(resource),
             contentDescription = null,
-            modifier = modifier,
+            modifier = modifier.size(22.dp),
             tint = color,
         )
         return
@@ -720,7 +720,7 @@ fun LineIcon(name: String, modifier: Modifier = Modifier.size(22.dp), color: Col
         remember(name) {
             PathParser().parsePathString(ICONS[name] ?: ICONS.getValue("sun")).toPath()
         }
-    Canvas(modifier) {
+    Canvas(modifier.size(22.dp)) {
         scale(size.width / 24f, size.height / 24f, pivot = Offset.Zero) {
             drawPath(
                 path,
@@ -732,14 +732,10 @@ fun LineIcon(name: String, modifier: Modifier = Modifier.size(22.dp), color: Col
 }
 
 @Composable
-fun HeadGlow(
-    points: List<String>,
-    values: Map<String, Double>,
-    modifier: Modifier = Modifier.width(270.dp),
-) {
+fun HeadGlow(points: List<String>, values: Map<String, Double>, modifier: Modifier = Modifier) {
     val p = C
     val dark = p.bg == Dark.bg
-    Canvas(modifier.aspectRatio(1f)) {
+    Canvas(modifier.width(270.dp).aspectRatio(1f)) {
         val sx = size.width / 220f
         // The source SVG is centered inside a square run panel.
         translate(top = (size.height - size.width / 1.1f) / 2) {
@@ -801,14 +797,16 @@ fun HeadGlow(
 @Composable
 fun HeadMap(
     points: List<String>,
-    modifier: Modifier = Modifier.width(240.dp),
+    modifier: Modifier = Modifier,
     glow: Boolean = false,
     values: Map<String, Double> = emptyMap(),
     onToggle: ((String) -> Unit)? = null,
 ) {
     val p = C
     BoxWithConstraints(
-        modifier.aspectRatio(1.1f).semantics { contentDescription = "แผนผังจุดกระตุ้น 19 จุด" }
+        modifier.width(240.dp).aspectRatio(1.1f).semantics {
+            contentDescription = "แผนผังจุดกระตุ้น 19 จุด"
+        }
     ) {
         val w = maxWidth
         val scale = w / 220

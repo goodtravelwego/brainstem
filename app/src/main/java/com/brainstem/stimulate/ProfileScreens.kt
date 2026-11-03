@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.graphics.scale
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.Period
@@ -37,7 +38,7 @@ private fun profilePhoto(bitmap: Bitmap): String {
             side,
             side,
         )
-    val scaled = Bitmap.createScaledBitmap(crop, 128, 128, true)
+    val scaled = crop.scale(128, 128)
     return ByteArrayOutputStream().use { output ->
         scaled.compress(Bitmap.CompressFormat.JPEG, 80, output)
         Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
@@ -45,11 +46,7 @@ private fun profilePhoto(bitmap: Bitmap): String {
 }
 
 @Composable
-fun ProfileAvatar(
-    profile: Profile,
-    modifier: Modifier = Modifier.size(30.dp),
-    colorIndex: Int = 0,
-) {
+fun ProfileAvatar(profile: Profile, modifier: Modifier = Modifier, colorIndex: Int = 0) {
     val image =
         remember(profile.photo) {
             runCatching {
@@ -62,7 +59,10 @@ fun ProfileAvatar(
     val colors = listOf(0xFF2F64AD, 0xFFD9533F, 0xFF6E4FC0, 0xFF1F8277, 0xFFB07A10, 0xFFB5487A)
     val color =
         Color(colors[if (profile.id == "new") colors.lastIndex else colorIndex.mod(colors.size)])
-    Box(modifier.clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
+    Box(
+        modifier.size(30.dp).clip(CircleShape).background(color),
+        contentAlignment = Alignment.Center,
+    ) {
         if (image != null) Image(image, profile.name, Modifier.fillMaxSize())
         else
             Canvas(Modifier.fillMaxSize()) {

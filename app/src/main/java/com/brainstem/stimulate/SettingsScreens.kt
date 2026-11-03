@@ -13,6 +13,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.*
@@ -369,7 +371,8 @@ fun HistoryScreen(a: AppState) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDialog(a: AppState) {
-    val maxHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * .88f
+    val windowSize = LocalWindowInfo.current.containerSize
+    val maxHeight = with(LocalDensity.current) { windowSize.height.toDp() } * .88f
     val blue = Color(if (C.bg == Dark.bg) 0xFF4F86D6 else 0xFF2F64AD)
     ModalBottomSheet(
         onDismissRequest = { if (a.profiles.isNotEmpty()) a.profileOpen = false },

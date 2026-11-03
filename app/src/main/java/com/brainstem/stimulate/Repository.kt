@@ -1,6 +1,7 @@
 package com.brainstem.stimulate
 
 import android.content.Context
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -182,6 +183,6 @@ class Repository(context: Context) {
         runCatching { JSONArray(prefs.getString(key, "[]")!!) }.getOrDefault(JSONArray())
 
     fun put(key: String, value: Any) {
-        prefs.edit().putString(key, value.toString()).apply()
+        prefs.edit { putString(key, value.toString()) }
     }
 }

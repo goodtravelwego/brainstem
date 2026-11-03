@@ -1,5 +1,3 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-
 package com.brainstem.stimulate
 
 import android.os.SystemClock
@@ -16,8 +14,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -25,13 +24,14 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import kotlin.math.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 
 @Composable
 fun RunScreen(a: AppState) {
     val r = a.engine ?: return
-    val revision = a.revision
-    val s = r.step
+    // The engine uses plain fields; its revision invalidates the displayed step on every tick.
+    val s = remember(r, a.revision) { r.step }
     val motion = rememberInfiniteTransition(label = "run motion")
     val wavePhase by
         motion.animateFloat(
@@ -43,7 +43,7 @@ fun RunScreen(a: AppState) {
     LaunchedEffect(r) {
         var last = SystemClock.elapsedRealtime()
         while (a.engine === r) {
-            delay(100)
+            delay(100.milliseconds)
             val now = SystemClock.elapsedRealtime()
             val dt = (now - last) / 1000.0
             last = now
@@ -63,7 +63,8 @@ fun RunScreen(a: AppState) {
     // Reuse the visual transition's frame invalidation without a second frame loop.
     // A separate withFrameNanos loop also drives virtual test time while waiting for idle.
     val realSeconds = remember(wavePhase) { SystemClock.elapsedRealtime() / 1000.0 }
-    val headSize = minOf(270.dp, LocalConfiguration.current.screenWidthDp.dp * .7f)
+    val windowSize = LocalWindowInfo.current.containerSize
+    val headSize = minOf(270.dp, with(LocalDensity.current) { windowSize.width.toDp() } * .7f)
     CompositionLocalProvider(LocalPalette provides p) {
         Column(
             Modifier.fillMaxSize().drawBehind {
@@ -96,7 +97,7 @@ fun RunScreen(a: AppState) {
                     display = true,
                     weight = FontWeight.Medium,
                 )
-                Timeline(r.plan.steps, r.index, runStyle = true)
+                Timeline(r.plan.steps, selected = r.index, runStyle = true)
                 if (s.phase.isEmpty()) {
                     val fVisual = min(1.0, .5 + .012 * frequencyAt(s, r.stepElapsed))
                     val w = .5 + .5 * sin(realSeconds * 2 * PI * fVisual)
@@ -267,7 +268,7 @@ else->"Measure"}} · EEG"
                                             )
                                     )
                                     Label(
-                                        "$n ${if(s.phase=="pre") "—" else r.bands?.get(i)?.roundToInt()?.let{if(it>=0)"+$it%"else"$it%"} ?: "…"}",
+                                        "$n ${if (s.phase == "pre") "—" else r.bands?.get(i)?.roundToInt()?.let { if (it >= 0) "+$it%" else "$it%" } ?: "…"}",
                                         size = 13,
                                         mono = true,
                                     )
@@ -374,7 +375,7 @@ fun SummaryScreen(a: AppState) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
-                        "${if(r.deltas[0]>0)"+"else""}${r.deltas[0].roundToInt()}%",
+                        "${if (r.deltas[0] > 0) "+" else ""}${r.deltas[0].roundToInt()}%",
                         fontFamily = DisplayFont,
                         modifier =
                             Modifier.height(34.dp)
@@ -448,7 +449,7 @@ fun SummaryScreen(a: AppState) {
                 ) {
                     listOf("β" to 1, "θ" to 2, "high-β" to 3).forEach { (n, i) ->
                         Label(
-                            "$n ${if(r.deltas[i]>=0)"+"else""}${r.deltas[i].roundToInt()}%",
+                            "$n ${if (r.deltas[i] >= 0) "+" else ""}${r.deltas[i].roundToInt()}%",
                             modifier =
                                 Modifier.clip(RoundedCornerShape(10.dp))
                                     .background(p.surface2)
@@ -514,7 +515,7 @@ fun HeadsetCheck(a: AppState) {
     LaunchedEffect(model) {
         var last = SystemClock.elapsedRealtime()
         while (true) {
-            delay(100)
+            delay(100.milliseconds)
             val now = SystemClock.elapsedRealtime()
             model.advance((now - last) / 1000.0)
             last = now
@@ -627,7 +628,7 @@ private fun CheckTile(n: String, v: Double, modifier: Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Label(n, size = 14, color = color, display = true)
-        Label("${"%.1f".format(v)}", size = 10.5, color = C.muted, mono = true)
+        Label("%.1f".format(v), size = 10.5, color = C.muted, mono = true)
     }
 }
 

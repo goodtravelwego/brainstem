@@ -668,7 +668,8 @@ private fun SessionCard(a: AppState) {
             Spacer(Modifier.weight(1f))
             Note(
                 if (q.isEmpty()) "ว่าง"
-                else "${q.sumOf{it.minutes}} min · ${q.size} program${if(q.size>1)"s"else""}"
+                else
+                    "${q.sumOf { it.minutes }} min · ${q.size} program${if (q.size > 1) "s" else ""}"
             )
         }
         if (q.isEmpty())

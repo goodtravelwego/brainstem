@@ -461,7 +461,9 @@ private fun CompactFrequencyEditor(s: Step, onChange: (Step) -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 SWEEP_PRESETS.forEach { (name, l, h) ->
-                    Pill(name, s.f1 == l && s.f2 == h) { onChange(s.copy(f1 = l, f2 = h)) }
+                    Pill(name, selected = s.f1 == l && s.f2 == h) {
+                        onChange(s.copy(f1 = l, f2 = h))
+                    }
                 }
             }
         } else {
@@ -601,7 +603,7 @@ fun ProgramScreen(a: AppState) {
                     if (a.pro) " · duty ${step.duty.takeIf{it>0}?:a.spec.duty}%" else ""
             )
         }
-        Timeline(scaled.steps, index, big = true)
+        Timeline(scaled.steps, selected = index, big = true)
         if (scaled.steps.size > 1)
             Column {
                 scaled.steps.forEachIndexed { i, s ->
@@ -760,9 +762,9 @@ fun BuilderScreen(a: AppState) {
             cursorBrush = SolidColor(C.accent),
         )
         Note(
-            "${p.steps.size} step${if(p.steps.size>1)"s"else""} · total ${timeText(p.seconds.toDouble())}"
+            "${p.steps.size} step${if (p.steps.size > 1) "s" else ""} · total ${timeText(p.seconds.toDouble())}"
         )
-        Timeline(p.steps, a.editStep)
+        Timeline(p.steps, selected = a.editStep)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             p.steps.forEachIndexed { i, s ->
                 if (i != a.editStep)
@@ -786,7 +788,7 @@ fun BuilderScreen(a: AppState) {
                         Column(Modifier.weight(1f)) {
                             Label(s.autoLabel(), size = 13.5, weight = FontWeight.Medium)
                             Label(
-                                "${timeText(s.dur.toDouble())} · ${if(s.power<=50)"Gentle"else"Full"}",
+                                "${timeText(s.dur.toDouble())} · ${if (s.power <= 50) "Gentle" else "Full"}",
                                 size = 11.5,
                                 color = C.muted,
                             )
@@ -836,12 +838,12 @@ fun BuilderScreen(a: AppState) {
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 AREAS.forEach { (name, points) ->
-                                    Pill(name, s.pts.toSet() == points.toSet()) {
+                                    Pill(name, selected = s.pts.toSet() == points.toSet()) {
                                         custom = false
                                         a.updateStep(s.copy(pts = points))
                                     }
                                 }
-                                Pill("Custom…", custom) { custom = true }
+                                Pill("Custom…", selected = custom) { custom = true }
                             }
                             if (custom) {
                                 HeadMap(

@@ -70,7 +70,7 @@ Follow-up on **3 November 2026**, addressing the two marked browser comments:
 - Unit tests: **10 passed**, covering dose, step boundaries, pause, sweeps, proportional duration, closed-loop timing, headset gating, seeded replay, and frequency-dependent light-off EEG sampling.
 - Android 17 / API 37 instrumentation flow: **passed**. It covers categories, favorites, queue, all/clear selection, sweep presets, first and repeated headset checks, pause/resume/completion, history, descending builder sweep, custom-program creation, Repeat regression, and dark mode.
 - Local completion check on 3 November adds two lifecycle regressions: activity recreation retains the ViewModel/session and pauses it; a fresh ViewModel restores the saved profile, queue, custom programs, favorites, helmet settings, session plan, seed, elapsed time, dose and EEG. Resuming the restored session produces the same subsequent dose/EEG as the original. This tests preferences reload and activity recreation, not an operating-system process kill. The flow fixture explicitly resets speed, helmet settings and closed-loop state so the tests can run together. **All three device tests passed together locally in 43.6 seconds.**
-- Android lint: **0 errors**; warnings include dependency updates, deprecated platform APIs, and small-screen layout advice.
+- Android lint: **0 errors, 6 warnings** after the 3 November editor cleanup. All remaining lint warnings recommend newer Gradle/dependency versions; the 20 source-level lint warnings were corrected.
 - Twenty-one current screenshots: [screenshots](screenshots), including native profile editing, baseline measurement, and closed-loop summary.
 
 Instrumentation now uses `com.brainstem.stimulate.verification`, keeping the normal debug app's saved data separate. It does not log into or modify a real online account.
@@ -84,6 +84,12 @@ Instrumentation now uses `com.brainstem.stimulate.verification`, keeping the nor
 - **Excluded/shared modules:** Train, Evaluate, Map and clinic remote management are outside the requested implementation. The Alpha card explains default-frequency use, and the seven-day strip opens Stimulate History. Browser-local history is not imported and cross-device activity synchronization is not added.
 
 Build success and passing interaction tests are reported as build/behavior evidence, not as proof of universal pixel equality or a verified backend integration.
+
+## Android Studio diagnostics follow-up — 3 November
+
+The IDE showed red `Literals must be surrounded by whitespace` errors for compressed conditional expressions inside Kotlin string templates, even though the Gradle compiler accepted those expressions. Spaced the expressions in Run/Summary, the session queue and the builder. Android Studio's **Project Errors** pane then reported **No errors found by the IDE**. The open `SessionScreens.kt` file has no yellow code warnings; its remaining `eyeoff` spelling hint is an internal icon identifier.
+
+The cleanup also gives the session revision a meaningful role in reading the displayed step, uses window-container dimensions for responsive sizing, moves default dimensions inside composables, puts optional modifiers first, uses the equivalent Android KTX preference/URI/bitmap helpers, declares the existing no-backup policy for older Android versions, and removes redundant annotations/string templates. Debug/verification builds, ten unit tests and both lint variants pass locally; all three device tests passed again together in 53.9 seconds. Quick Start, paused running and profile-form captures were visually checked after the modifier changes. No dependency versions or reference data were changed.
 
 ## Git delivery
 
