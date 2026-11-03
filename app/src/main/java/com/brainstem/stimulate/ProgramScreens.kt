@@ -655,17 +655,29 @@ fun ProgramScreen(a: AppState) {
         }
         if (p.note.isNotBlank()) Note(p.note)
         AboutProgram(a, p)
-        if (a.pro)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (p.src == "custom") Pill("Edit") { a.editProgram(false) }
-                Pill(if (p.src == "custom") "Duplicate" else "Duplicate & Edit") {
+        if (a.pro) {
+            if (p.src == "custom") {
+                FlowRow(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ProgramActionButton("Edit", "edit") { a.editProgram(false) }
+                    ProgramActionButton("Duplicate", "copy") { a.editProgram(true) }
+                    ProgramActionButton(
+                        "Delete",
+                        "trash",
+                        color = Color(if (C.bg == Dark.bg) 0xFFE8735E else 0xFFB13E2C),
+                    ) {
+                        deleting = true
+                    }
+                }
+            } else {
+                ProgramActionButton("Duplicate & Edit", "copy", Modifier.fillMaxWidth()) {
                     a.editProgram(true)
                 }
-                if (p.src == "custom") Pill("Delete") { deleting = true }
             }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Action("+ Session", Modifier.weight(1f), primary = false) {
                 a.queue.add(QueueItem(p.id, a.programMinutes))
@@ -698,6 +710,35 @@ fun ProgramScreen(a: AppState) {
 }
 
 @Composable
+private fun ProgramActionButton(
+    text: String,
+    icon: String,
+    modifier: Modifier = Modifier,
+    color: Color = C.ink,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(C.surface2)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LineIcon(icon, Modifier.size(16.dp), color)
+        Label(
+            text,
+            Modifier.height(20.15.dp)
+                .wrapContentHeight(Alignment.CenterVertically, unbounded = true),
+            size = 13,
+            weight = FontWeight.Medium,
+            color = color,
+        )
+    }
+}
+
+@Composable
 private fun AboutProgram(a: AppState, p: Program) {
     val info = a.repo.info.optJSONObject(p.id) ?: return
     val evidence = a.repo.evidence.getJSONArray(info.getString("ev"))
@@ -707,22 +748,39 @@ private fun AboutProgram(a: AppState, p: Program) {
             Spacer(Modifier.weight(1f))
             EvidenceBadge(info.getString("ev"), evidence.getString(0))
         }
-        Label(info.getString("why"), size = 13)
+        Text(
+            info.getString("why"),
+            color = C.ink,
+            fontFamily = BodyFont,
+            fontSize = 13.sp,
+            lineHeight = 20.8.sp,
+        )
         Column(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
                 .background(C.surface2)
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Label("ความถี่   ${info.getString("f")}", size = 12)
-            Label(
-                "ตำแหน่ง   ${p.steps.map{a.repo.regionName(it.pts)}.distinct().joinToString(" → ")}",
-                size = 12,
+            ProgramRationaleRow("pulse", "ความถี่", info.getString("f"))
+            ProgramRationaleRow(
+                "target",
+                "ตำแหน่ง",
+                p.steps.map { a.repo.regionName(it.pts) }.distinct().joinToString(" → "),
             )
-            Label("กลไก   NIR → ไมโทคอนเดรีย (CCO) → ATP · การกะพริบ → คลื่นสมอง", size = 12)
+            ProgramRationaleRow(
+                "bulb",
+                "กลไก",
+                "NIR → ไมโทคอนเดรีย (CCO) → ATP · การกะพริบ → คลื่นสมอง",
+            )
         }
-        Note(evidence.getString(1))
+        Text(
+            evidence.getString(1),
+            color = C.muted,
+            fontFamily = BodyFont,
+            fontSize = 11.5.sp,
+            lineHeight = 17.25.sp,
+        )
         val refs = info.getJSONArray("r").strings() + "hashmi"
         Expandable("อ้างอิง ${refs.size}", compactDisclosure = true) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -737,6 +795,15 @@ private fun AboutProgram(a: AppState, p: Program) {
             size = 11,
             color = C.muted,
         )
+    }
+}
+
+@Composable
+private fun ProgramRationaleRow(icon: String, caption: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.width(18.dp).padding(top = 1.dp)) { LineIcon(icon, Modifier.size(16.dp)) }
+        Label(caption, Modifier.width(58.dp), size = 12, color = C.muted)
+        Label(value, Modifier.weight(1f), size = 12, weight = FontWeight.Medium)
     }
 }
 

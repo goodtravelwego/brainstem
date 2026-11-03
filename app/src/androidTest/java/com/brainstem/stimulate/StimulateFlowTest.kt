@@ -122,8 +122,27 @@ class StimulateFlowTest {
         rule.onNodeWithContentDescription("ติดดาว").performClick()
         snapshot("03-program")
         rule.runOnIdle { state.pro = true }
-        rule.onNodeWithText("Duplicate & Edit").performScrollTo().performClick()
+        val duplicate = rule.onNodeWithText("Duplicate & Edit").performScrollTo()
+        val duplicateBounds = duplicate.fetchSemanticsNode().boundsInRoot
+        val density = rule.activity.resources.displayMetrics.density
+        assertEquals(16 * density, duplicateBounds.left, density)
+        assertEquals(
+            rule.onRoot().fetchSemanticsNode().boundsInRoot.width - 32 * density,
+            duplicateBounds.width,
+            density,
+        )
+        assertEquals(36.15f * density, duplicateBounds.height, density)
+        rule.onNodeWithText("Start  10 min").performScrollTo()
+        snapshot("22-program-actions")
+        duplicate.performClick()
         rule.onNodeWithText("Alpha Calm (copy)").assertIsDisplayed()
+        rule.runOnIdle {
+            assertEquals("custom", state.draft!!.src)
+            assertEquals("custom", state.draft!!.cat)
+            assertNotEquals(state.selected!!.id, state.draft!!.id)
+            assertEquals(state.selected!!.steps, state.draft!!.steps)
+            assertTrue("Opening a copy must not save it", state.customs.isEmpty())
+        }
         rule.onNodeWithContentDescription("ขึ้น").assertIsNotEnabled()
         rule.onNodeWithContentDescription("ลง").assertIsNotEnabled()
         rule.onNodeWithContentDescription("ลบ").assertIsNotEnabled()
@@ -246,6 +265,24 @@ class StimulateFlowTest {
             assertEquals("Native test program", state.customs.single().name)
         }
         snapshot("10-custom-program")
+        rule.onNodeWithText("Duplicate").performScrollTo()
+        rule.onNodeWithText("Edit", useUnmergedTree = true).assertExists()
+        rule.onNodeWithText("Delete", useUnmergedTree = true).assertExists()
+        snapshot("23-custom-program-actions")
+        rule.onNodeWithText("Duplicate").performClick()
+        rule.runOnIdle {
+            assertEquals("Native test program (copy)", state.draft!!.name)
+            assertNotEquals(state.selected!!.id, state.draft!!.id)
+            assertEquals(state.selected!!.steps, state.draft!!.steps)
+            assertEquals(1, state.customs.size)
+        }
+        rule.onNodeWithText("Cancel").performScrollTo().performClick()
+        rule.onNodeWithText("Edit", useUnmergedTree = true).performScrollTo().performClick()
+        rule.runOnIdle {
+            assertEquals(state.selected!!.id, state.draft!!.id)
+            assertEquals("Native test program", state.draft!!.name)
+        }
+        rule.onNodeWithText("Cancel").performScrollTo().performClick()
         rule.runOnIdle { state.navigate(Screen.SETTINGS) }
         snapshot("18-settings-pro")
         rule.runOnIdle { state.pro = false }
