@@ -76,6 +76,9 @@ jobs:
           api-level: 35
           arch: x86_64
           target: google_apis
+          ram-size: 2048M
+          disk-size: 2048M
+          emulator-boot-timeout: 300
           disable-animations: true
           script: |
             adb shell wm size 372x848
