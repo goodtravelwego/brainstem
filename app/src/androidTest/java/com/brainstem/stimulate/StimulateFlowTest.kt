@@ -148,6 +148,24 @@ class StimulateFlowTest {
         rule.onNodeWithContentDescription("ลบ").assertIsNotEnabled()
         rule.onNodeWithContentDescription("ทำซ้ำ").assertIsEnabled()
         snapshot("21-builder-alpha-copy")
+        rule.onNodeWithText("Whole head").assertIsSelected()
+        rule.onNodeWithText("Custom…").assertIsNotSelected().performClick().assertIsSelected()
+        listOf("Whole head", "Front", "Back", "Limbic").forEach {
+            rule.onNodeWithText(it).assertIsNotSelected()
+        }
+        rule.runOnIdle { assertEquals(POINTS, state.draft!!.steps.first().pts) }
+        rule.onNodeWithContentDescription("Fp1").performClick()
+        rule.runOnIdle { assertFalse("Fp1" in state.draft!!.steps.first().pts) }
+        rule.onNodeWithContentDescription("Fp1").performClick()
+        rule.runOnIdle { assertEquals(POINTS, state.draft!!.steps.first().pts) }
+        rule.onNodeWithText("Custom…").assertIsSelected()
+        rule.onNodeWithText("Whole head").assertIsNotSelected()
+        snapshot("24-builder-custom-area")
+        rule.onNodeWithText("Front").performClick().assertIsSelected()
+        rule.onNodeWithText("Custom…").assertIsNotSelected()
+        rule.runOnIdle { assertEquals(AREAS.getValue("Front"), state.draft!!.steps.first().pts) }
+        rule.onNodeWithText("Whole head").performClick().assertIsSelected()
+        rule.onNodeWithText("Custom…").assertIsNotSelected()
         rule.onNodeWithContentDescription("ทำซ้ำ").performClick()
         rule.runOnIdle { assertEquals(2, state.draft!!.steps.size) }
         rule.onNodeWithContentDescription("ลบ").assertIsEnabled().performClick()
@@ -233,7 +251,9 @@ class StimulateFlowTest {
             assertEquals(13.0, state.draft!!.steps.first().f1, 0.0)
             assertEquals(12.0, state.draft!!.steps.first().f2, 0.0)
         }
-        rule.onNodeWithContentDescription("เพิ่ม min").performScrollTo().assertIsDisplayed()
+        // Bring the following row into view so the duration buttons are clear of the screen edge.
+        rule.onNodeWithText("Duty cycle").performScrollTo()
+        rule.onNodeWithContentDescription("เพิ่ม min").assertIsDisplayed()
         val durationIncrease =
             rule.onNodeWithContentDescription("เพิ่ม min").fetchSemanticsNode().boundsInRoot
         assertTrue(

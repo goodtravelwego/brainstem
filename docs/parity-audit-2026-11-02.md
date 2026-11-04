@@ -71,7 +71,7 @@ Follow-up on **3 November 2026**, addressing the two marked browser comments:
 - Android 17 / API 37 instrumentation flow: **passed**. It covers categories, favorites, queue, all/clear selection, sweep presets, first and repeated headset checks, pause/resume/completion, history, descending builder sweep, custom-program creation, Repeat regression, and dark mode.
 - Local completion check on 3 November adds two lifecycle regressions: activity recreation retains the ViewModel/session and pauses it; a fresh ViewModel restores the saved profile, queue, custom programs, favorites, helmet settings, session plan, seed, elapsed time, dose and EEG. Resuming the restored session produces the same subsequent dose/EEG as the original. This tests preferences reload and activity recreation, not an operating-system process kill. The flow fixture explicitly resets speed, helmet settings and closed-loop state so the tests can run together. **All three device tests passed together locally in 43.6 seconds.**
 - Android lint: **0 errors, 6 warnings** after the 3 November editor cleanup. All remaining lint warnings recommend newer Gradle/dependency versions; the 20 source-level lint warnings were corrected.
-- Twenty-three current screenshots: [screenshots](screenshots), including native profile editing, baseline measurement, closed-loop summary, and program action buttons.
+- Twenty-four current screenshots: [screenshots](screenshots), including native profile editing, baseline measurement, closed-loop summary, program action buttons and Custom area selection.
 
 Instrumentation now uses `com.brainstem.stimulate.verification`, keeping the normal debug app's saved data separate. It does not log into or modify a real online account.
 
@@ -98,6 +98,12 @@ The marked reference control uses `.btn.sm` with `flex:1`; the native implementa
 The About section above the marked control also now includes its missing pulse/target/bulb icons, 18/58/flexible column widths with 6 dp gaps, medium value text, 10 dp vertical padding, and source paragraph/evidence line heights.
 
 Device assertions check that Duplicate & Edit spans the 372 dp screen's content width between 16 dp insets and has the reference height. Preset and custom duplication open unsaved copies with new IDs and preserved steps; Edit retains the original program ID. The screenshots are [preset actions](screenshots/22-program-actions.png) and [custom actions](screenshots/23-custom-program-actions.png). The existing Easy/Pro visibility and save/cancel behavior are retained.
+
+## Custom area selection follow-up — 4 November
+
+The reference can highlight a named area and Custom simultaneously because the preset highlight is derived from the selected points while Custom tracks whether the manual editor is open. The Android builder now highlights only Custom while editing points manually. Entering Custom preserves the current mask, including all 19 points from Whole head. Toggling a point off and back on keeps Custom selected; choosing Front or Whole head closes the point editor, applies that region and highlights only that preset.
+
+The area controls expose their selected state to accessibility and device tests. Regression checks cover both editor transitions, preservation of points on entry, toggling back to all points, and selection of a named region. [The native capture](screenshots/24-builder-custom-area.png) shows Custom selected with all 19 points and Whole head unselected.
 
 ## Git delivery
 

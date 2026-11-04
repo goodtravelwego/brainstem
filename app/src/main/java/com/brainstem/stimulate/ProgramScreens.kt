@@ -905,12 +905,23 @@ fun BuilderScreen(a: AppState) {
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 AREAS.forEach { (name, points) ->
-                                    Pill(name, selected = s.pts.toSet() == points.toSet()) {
+                                    val areaSelected = !custom && s.pts.toSet() == points.toSet()
+                                    Pill(
+                                        name,
+                                        modifier = Modifier.semantics { selected = areaSelected },
+                                        selected = areaSelected,
+                                    ) {
                                         custom = false
                                         a.updateStep(s.copy(pts = points))
                                     }
                                 }
-                                Pill("Custom…", selected = custom) { custom = true }
+                                Pill(
+                                    "Custom…",
+                                    modifier = Modifier.semantics { selected = custom },
+                                    selected = custom,
+                                ) {
+                                    custom = true
+                                }
                             }
                             if (custom) {
                                 HeadMap(
