@@ -19,12 +19,6 @@ class StimulateFlowTest {
     private val state
         get() = ViewModelProvider(rule.activity)[AppState::class.java]
 
-    private fun discardIfAsked() {
-        if (rule.onAllNodesWithText("Discard changes").fetchSemanticsNodes().isNotEmpty()) {
-            rule.onNodeWithText("Discard changes").performClick()
-        }
-    }
-
     private fun snapshot(name: String) {
         rule.waitForIdle()
         // Platform ripples animate on the render thread, outside the Compose test clock.
@@ -178,7 +172,6 @@ class StimulateFlowTest {
         rule.runOnIdle { assertEquals(1, state.draft!!.steps.size) }
         rule.onNodeWithContentDescription("ลบ").assertIsNotEnabled()
         rule.onNodeWithText("Cancel").performScrollTo().performClick()
-        discardIfAsked()
         rule.runOnIdle {
             state.pro = false
             assertEquals(Screen.PROGRAM, state.screen)
@@ -186,8 +179,6 @@ class StimulateFlowTest {
         rule.onNodeWithText("+ Session").assertIsDisplayed().performClick()
         rule.runOnIdle { assertEquals("std-alpha", state.queue.single().pid) }
         snapshot("04-session-queue")
-        // The confirmation Snackbar temporarily covers lower scrolling content.
-        rule.waitUntil(6000) { state.notice.isEmpty() }
         rule.onNodeWithText("Quick Start").performClick()
         rule.onNodeWithContentDescription("ตั้งค่า").assertIsDisplayed()
         rule.onNodeWithText("Clear", useUnmergedTree = true).performClick()
@@ -301,7 +292,6 @@ class StimulateFlowTest {
             assertEquals("Native test program", state.customs.single().name)
         }
         snapshot("10-custom-program")
-        rule.waitUntil(6000) { state.notice.isEmpty() }
         rule.onNodeWithText("Duplicate").performScrollTo()
         rule.onNodeWithText("Edit", useUnmergedTree = true).assertExists()
         rule.onNodeWithText("Delete", useUnmergedTree = true).assertExists()
@@ -314,14 +304,12 @@ class StimulateFlowTest {
             assertEquals(1, state.customs.size)
         }
         rule.onNodeWithText("Cancel").performScrollTo().performClick()
-        discardIfAsked()
         rule.onNodeWithText("Edit", useUnmergedTree = true).performScrollTo().performClick()
         rule.runOnIdle {
             assertEquals(state.selected!!.id, state.draft!!.id)
             assertEquals("Native test program", state.draft!!.name)
         }
         rule.onNodeWithText("Cancel").performScrollTo().performClick()
-        discardIfAsked()
         rule.runOnIdle { state.navigate(Screen.SETTINGS) }
         snapshot("18-settings-pro")
         rule.runOnIdle { state.pro = false }

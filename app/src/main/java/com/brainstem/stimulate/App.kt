@@ -14,11 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -29,30 +25,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
 import kotlin.math.*
-import kotlinx.coroutines.launch
 
 @Composable
 fun BrainApp(a: AppState) {
     val context = LocalContext.current
     val p = C
-    val snackbar = remember { SnackbarHostState() }
-    LaunchedEffect(a.notice) {
-        val message = a.notice
-        if (message.isNotBlank()) {
-            snackbar.showSnackbar(message)
-            if (a.notice == message) a.notice = ""
-        }
-    }
     BackHandler(
         enabled =
             a.loggedIn &&
                 (a.screen != Screen.HOME || a.engine != null || a.checkOpen || a.profileOpen)
     ) {
         when {
-            a.draftExitOpen -> a.keepEditingDraft()
             a.checkOpen -> a.checkOpen = false
             a.profileOpen -> a.profileOpen = false
-            a.engine != null -> a.pauseInBackground()
+            a.engine != null -> a.pause()
             else -> a.back()
         }
     }
@@ -96,11 +82,6 @@ fun BrainApp(a: AppState) {
             ) {
                 ProfileForm(a)
             }
-        SnackbarHost(
-            snackbar,
-            Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 96.dp),
-        )
-        if (a.draftExitOpen) DraftExitDialog(a)
         if (a.message.isNotBlank())
             AlertDialog(
                 onDismissRequest = { a.message = "" },
@@ -115,84 +96,70 @@ fun BrainApp(a: AppState) {
 
 @Composable
 private fun AppHeader(a: AppState) {
-    Column {
-        Row(
-            Modifier.fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)
-                .heightIn(min = 48.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (a.screen != Screen.HOME)
-                Box(
-                    Modifier.size(36.dp)
-                        .clip(CircleShape)
-                        .background(C.surface)
-                        .clickable { a.back() }
-                        .semantics { contentDescription = "ย้อนกลับ" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    LineIcon("back", Modifier.size(19.dp), C.ink)
-                }
-            if (a.screen == Screen.HOME) {
-                Wordmark(19)
-                Label("PBM", size = 13, color = C.muted, display = true, weight = FontWeight.Medium)
-            } else {
-                Box(
-                    Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(C.accent),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Label("S", size = 17, color = Color.White, display = true)
-                }
-                Title(
-                    when (a.screen) {
-                        Screen.QUICK -> "Quick Start"
-                        Screen.PROGRAM -> "Program"
-                        Screen.BUILDER -> "Program Builder"
-                        Screen.SETTINGS -> "Settings"
-                        Screen.HISTORY -> "History"
-                        Screen.SUMMARY ->
-                            if (a.summaryFromHistory) "Session details"
-                            else if (a.summary?.complete == true) "Complete" else "Session ended"
-                        else -> "PBM"
-                    },
-                    modifier = Modifier.weight(1f),
-                    size = 19,
-                )
+    Row(
+        Modifier.fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 10.dp)
+            .heightIn(min = 36.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (a.screen != Screen.HOME)
+            Box(
+                Modifier.size(36.dp)
+                    .clip(CircleShape)
+                    .background(C.surface)
+                    .clickable { a.back() }
+                    .semantics { contentDescription = "ย้อนกลับ" },
+                contentAlignment = Alignment.Center,
+            ) {
+                LineIcon("back", Modifier.size(19.dp), C.ink)
             }
-            if (a.screen == Screen.HOME) Spacer(Modifier.weight(1f))
-            if (a.screen == Screen.HOME)
-                TextButton(onClick = { a.navigate(Screen.HISTORY) }) {
-                    LineIcon("clock", Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Label("History", size = 13)
-                }
-            if (a.screen != Screen.SETTINGS)
-                Box(
-                    Modifier.size(36.dp)
-                        .clip(CircleShape)
-                        .background(C.surface)
-                        .clickable { a.navigate(Screen.SETTINGS) }
-                        .semantics { contentDescription = "ตั้งค่า" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    LineIcon("settings", Modifier.size(19.dp), C.ink)
-                }
+        if (a.screen == Screen.HOME) {
+            Wordmark(19)
+            Label("PBM", size = 13, color = C.muted, display = true, weight = FontWeight.Medium)
+        } else {
+            Box(
+                Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(C.accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Label("S", size = 17, color = Color.White, display = true)
+            }
+            Title(
+                when (a.screen) {
+                    Screen.QUICK -> "Quick Start"
+                    Screen.PROGRAM -> "Program"
+                    Screen.BUILDER -> "Program Builder"
+                    Screen.SETTINGS -> "Settings"
+                    Screen.HISTORY -> "History"
+                    Screen.SUMMARY ->
+                        if (a.summary?.complete == true) "Complete" else "Stopped Early"
+                    else -> "PBM"
+                },
+                modifier = Modifier.weight(1f),
+                size = 19,
+            )
         }
-        SessionContextBar(a, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
+        if (a.screen == Screen.HOME) Spacer(Modifier.weight(1f))
+        if (a.screen != Screen.SETTINGS)
+            Box(
+                Modifier.size(36.dp)
+                    .clip(CircleShape)
+                    .background(C.surface)
+                    .clickable { a.navigate(Screen.SETTINGS) }
+                    .semantics { contentDescription = "ตั้งค่า" },
+                contentAlignment = Alignment.Center,
+            ) {
+                LineIcon("settings", Modifier.size(19.dp), C.ink)
+            }
     }
 }
 
 @Composable
-fun ScreenColumn(
-    key: Any,
-    scrollState: ScrollState? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
+fun ScreenColumn(key: Any, content: @Composable ColumnScope.() -> Unit) {
     key(key) {
         Column(
             Modifier.fillMaxSize()
-                .verticalScroll(scrollState ?: rememberScrollState())
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
                 .padding(top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -229,10 +196,6 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var reveal by remember { mutableStateOf(false) }
     var signup by rememberSaveable { mutableStateOf(false) }
-    var emailError by rememberSaveable { mutableStateOf(false) }
-    var passwordError by rememberSaveable { mutableStateOf(false) }
-    val emailFocus = remember { FocusRequester() }
-    val passwordFocus = remember { FocusRequester() }
     Column(
         Modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
@@ -283,21 +246,7 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Label("อีเมล", size = 16, weight = FontWeight.Medium)
-            InputField(
-                email,
-                {
-                    email = it
-                    emailError = false
-                    a.error = ""
-                },
-                "",
-                modifier =
-                    Modifier.focusRequester(emailFocus).semantics { contentDescription = "อีเมล" },
-                keyboard = KeyboardType.Email,
-                isError = emailError,
-            )
-            if (emailError)
-                Label("กรอกอีเมลให้ถูกต้อง", size = 13, color = MaterialTheme.colorScheme.error)
+            InputField(email, { email = it }, "", KeyboardType.Email)
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Label(
@@ -307,21 +256,11 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
             )
             BasicTextField(
                 password,
-                {
-                    password = it
-                    passwordError = false
-                    a.error = ""
-                },
+                { password = it },
                 Modifier.fillMaxWidth()
-                    .focusRequester(passwordFocus)
-                    .semantics { contentDescription = "รหัสผ่าน" }
                     .clip(RoundedCornerShape(12.dp))
                     .background(C.surface)
-                    .border(
-                        1.dp,
-                        if (passwordError) MaterialTheme.colorScheme.error else C.line,
-                        RoundedCornerShape(12.dp),
-                    ),
+                    .border(1.dp, C.line, RoundedCornerShape(12.dp)),
                 singleLine = true,
                 visualTransformation =
                     if (reveal) VisualTransformation.None else PasswordVisualTransformation(),
@@ -355,33 +294,17 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
                     ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(C.accent),
             )
-            if (passwordError)
-                Label(
-                    "รหัสผ่านต้องมีอย่างน้อย 6 ตัว",
-                    size = 13,
-                    color = MaterialTheme.colorScheme.error,
-                )
         }
-        if (a.error.isNotBlank()) Label(a.error, size = 13, color = MaterialTheme.colorScheme.error)
+        if (a.error.isNotBlank()) Label(a.error, size = 14, color = MaterialTheme.colorScheme.error)
         Action(
             if (a.busy) "กำลังส่ง…" else if (signup) "สมัครสมาชิก" else "เข้าสู่ระบบ",
             enabled = !a.busy,
         ) {
-            emailError = !android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
-            passwordError = password.length < 6
-            when {
-                emailError -> emailFocus.requestFocus()
-                passwordError -> passwordFocus.requestFocus()
-                else -> a.signIn(email, password, signup)
-            }
+            a.signIn(email, password, signup)
         }
         if (!signup)
             TextButton(
-                onClick = {
-                    emailError =
-                        !android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
-                    if (emailError) emailFocus.requestFocus() else a.recover(email)
-                },
+                onClick = { a.recover(email) },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 enabled = !a.busy,
             ) {
@@ -395,8 +318,6 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
             TextButton(
                 onClick = {
                     signup = !signup
-                    emailError = false
-                    passwordError = false
                     a.error = ""
                 }
             ) {
@@ -418,22 +339,15 @@ fun InputField(
     value: String,
     onChange: (String) -> Unit,
     label: String,
-    modifier: Modifier = Modifier,
     keyboard: KeyboardType = KeyboardType.Text,
-    isError: Boolean = false,
 ) {
     BasicTextField(
         value,
         onChange,
-        modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(C.surface)
-            .border(
-                1.dp,
-                if (isError) MaterialTheme.colorScheme.error else C.line,
-                RoundedCornerShape(12.dp),
-            )
+            .border(1.dp, C.line, RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
@@ -456,12 +370,9 @@ fun InputField(
 
 @Composable
 fun HomeScreen(a: AppState) {
-    val scroll = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    var programsTop by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
-            ScreenColumn("home", scrollState = scroll) {
+            ScreenColumn("home") {
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -560,13 +471,8 @@ fun HomeScreen(a: AppState) {
                         )
                     }
                 }
-                SessionCard(a) { scope.launch { scroll.animateScrollTo(programsTop) } }
-                Row(
-                    Modifier.fillMaxWidth().onGloballyPositioned {
-                        programsTop = it.positionInParent().y.roundToInt()
-                    },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                SessionCard(a)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Title("Programs", size = 15)
                     Spacer(Modifier.weight(1f))
                     if (a.pro)
@@ -725,7 +631,7 @@ private fun ProgramDescription(goal: String, kind: String, evidence: String) {
 }
 
 @Composable
-private fun SessionCard(a: AppState, onChooseProgram: () -> Unit) {
+private fun SessionCard(a: AppState) {
     val q = a.queue
     CardBox(accent = q.isNotEmpty(), radius = 24, gap = 12, insetBorder = true) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -737,10 +643,20 @@ private fun SessionCard(a: AppState, onChooseProgram: () -> Unit) {
                     "${q.sumOf { it.minutes }} min · ${q.size} program${if (q.size > 1) "s" else ""}"
             )
         }
-        if (q.isEmpty()) {
-            Note("เลือกโปรแกรมจาก Relax, Focus หรือ Learn เพื่อจัดเซสชัน")
-            Action("Choose a program", primary = false, onClick = onChooseProgram)
-        } else {
+        if (q.isEmpty())
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(
+                    Modifier.size(32.dp).clip(CircleShape).background(C.accent.copy(alpha = .1f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Label("+", size = 18, color = C.accent)
+                }
+                Label("แตะ + ที่โปรแกรมด้านล่างเพื่อเพิ่มเข้าเซสชัน", size = 13, color = C.muted)
+            }
+        else {
             Timeline(q.flatMap { a.find(it.pid)?.scaled(it.minutes)?.steps ?: emptyList() })
             q.forEachIndexed { i, item ->
                 Row(

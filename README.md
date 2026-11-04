@@ -2,7 +2,7 @@
 
 An Android Studio project written in Kotlin and Jetpack Compose, based on the Stimulate/PBM module at https://brainstem-monitor.netlify.app/app/ inspected on 2 November 2026. The UI is native: no WebView or embedded website. Train, Evaluate, and Map have no screens or navigation destinations.
 
-The `codex/ux-ui-improvements` branch adds visible simulation/profile context, protected builder drafts, persistent primary actions, clearer Quick Start saving, and reopenable history. These are intentional UX changes from the reference. See the [UX changes and verification](docs/ux-improvements.md).
+The `codex/ux-ui-improvements` branch contains presentation changes to existing features: readable input text, improved action placement, spacing, and clearer labels. See [the scoped changes](docs/ux-improvements.md).
 
 ## Open and run
 
@@ -24,7 +24,7 @@ On this computer `local.properties` already points to the installed SDK. On anot
 - Today's Session queue: add/remove, reorder, adjust each duration, intensity, closed-loop toggle, Start Session, and recent-session Repeat.
 - Quick Start: all 19 individually selectable 10–20 points, All/Clear, region guide, Fixed/Sweep, logarithmic frequency slider, band/sweep presets, band guide, duration, Easy/Pro intensity, duty cycle, and Save as a custom program.
 - Pro program builder: create, edit, duplicate, delete, add/duplicate/reorder/delete steps, region/custom points, fixed/sweep frequencies, duration, power, and duty cycle.
-- Session timer, head visualization, frequency wave, Pause/Resume, End session, automatic completion, chime, delivered-energy calculation by point, and summary.
+- Session timer, head visualization, frequency wave, Pause/Resume, Stop, automatic completion, chime, delivered-energy calculation by point, and summary.
 - Simulated headset impedance check; closed-loop baseline, stimulation blocks of at most 3 minutes, 45-second measurements, final 60-second measurement, and simulated EEG summary.
 - Per-profile local history, Thai calendar, daily/monthly totals, Repeat, persisted queue/custom programs/preferences, and interrupted-session restoration in a paused state.
 - Easy/Pro modes, ×20/real-time simulation, helmet specifications, light/dark/system themes, profile switching, and sign out.
@@ -52,11 +52,9 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 .\gradlew.bat :app:connectedVerificationAndroidTest
 ```
 
-Verified locally on 4 November 2026: debug APK build, ten unit tests, lint (0 errors, 6 dependency/version-update warnings), and nine Android 17/API 37 device tests. The tests cover dose, timing, pause, sweeps, scaling, headset checks, and seeded EEG replay. The device flow covers categories, favorite/queue, Quick Start, headset checks, pause/completion, history, builder, Repeat, dark mode, profile validation/edit/persistence, and a complete closed-loop session. Two device tests cover activity recreation and saved profile/queue/session restoration, including continued dose and EEG. Six UX tests cover drafts, saved results, named saving, visible actions, login validation, and Back/early-end behaviour. They never sign into a real account. Their separate verification application ID preserves the normal debug app's local data.
+Verified on 2–3 November 2026: debug APK build, ten unit tests, lint (0 errors, 6 dependency/version-update warnings), and all three Android 17/API 37 device tests together locally. Android Studio's Project Errors pane also reports no errors after the string-template formatting corrections. The tests cover dose, timing, pause, sweeps, scaling, headset checks, and seeded EEG replay. The device flow covers categories, favorite/queue, Quick Start, headset checks, pause/completion, history, builder, Repeat, dark mode, profile validation/edit/persistence, and a complete closed-loop session. Two additional device tests cover activity recreation and saved profile/queue/session restoration, including continued dose and EEG. They never sign into a real account. Their separate verification application ID preserves the normal debug app's local data.
 
 Twenty-four emulator screenshots are in `docs/screenshots`, including the full-width Duplicate & Edit button, custom-program actions and exclusive Custom area selection. The test writes new screenshots to Gradle's additional-test-output directory, under `app/build/outputs/connected_android_test_additional_output`.
-
-Current UX-branch screenshots, including compact layouts, are in [docs/ux-screenshots](docs/ux-screenshots).
 
 The current captures use a 372×848 display at mdpi, with a 372×800 application area inside system insets. A second flow run checks the compact 320×640 application area. Session controls stay visible in a fixed bottom row while the content scrolls; the EEG scope scales with screen width. This layout is covered by explicit Pause/Resume visibility and state assertions.
 

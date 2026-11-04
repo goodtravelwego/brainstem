@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -22,8 +21,6 @@ import kotlin.math.*
 
 @Composable
 fun QuickScreen(a: AppState) {
-    var showPoints by rememberSaveable { mutableStateOf(false) }
-    var saving by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             ScreenColumn("quick") {
@@ -51,7 +48,6 @@ fun QuickScreen(a: AppState) {
                                 a.save()
                             }
                             QuickSelection("Clear") {
-                                showPoints = true
                                 a.quick = s.copy(pts = emptyList())
                                 a.save()
                             }
@@ -63,38 +59,20 @@ fun QuickScreen(a: AppState) {
                             a.save()
                         }
                     }
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        AREAS.forEach { (name, points) ->
-                            Pill(name, selected = !showPoints && s.pts.toSet() == points.toSet()) {
-                                a.quick = s.copy(pts = points)
-                                showPoints = false
-                                a.save()
-                            }
-                        }
-                        Pill("Custom…", selected = showPoints) { showPoints = true }
+                    HeadMap(s.pts, Modifier.align(Alignment.CenterHorizontally).width(240.dp)) { n
+                        ->
+                        a.quick =
+                            s.copy(
+                                pts = POINTS.filter { if (it == n) it !in s.pts else it in s.pts }
+                            )
+                        a.save()
                     }
-                    if (showPoints) {
-                        HeadMap(
-                            s.pts,
-                            Modifier.align(Alignment.CenterHorizontally).width(240.dp),
-                        ) { n ->
-                            a.quick =
-                                s.copy(
-                                    pts =
-                                        POINTS.filter { if (it == n) it !in s.pts else it in s.pts }
-                                )
-                            a.save()
-                        }
-                        Label(
-                            "แตะจุดเพื่อเลือก / เอาออก",
-                            Modifier.align(Alignment.CenterHorizontally),
-                            size = 11.5,
-                            color = C.muted,
-                        )
-                    }
+                    Label(
+                        "แตะจุดเพื่อเลือก / เอาออก",
+                        Modifier.align(Alignment.CenterHorizontally),
+                        size = 11.5,
+                        color = C.muted,
+                    )
                     Column(Modifier.padding(top = 2.dp)) {
                         HorizontalDivider(color = C.line)
                         Spacer(Modifier.height(2.dp))
@@ -145,7 +123,6 @@ fun QuickScreen(a: AppState) {
                                 a.save()
                             }
                         }
-                        Note("Duty คือสัดส่วนเวลาที่ไฟติดในแต่ละรอบ ใช้คำนวณแสงจำลอง")
                         HorizontalDivider(color = C.line)
                     }
                     QuickOptionRow("EEG Closed-loop") {
@@ -153,53 +130,37 @@ fun QuickScreen(a: AppState) {
                             a.requestClosedLoop()
                         }
                     }
-                    Note("Closed-loop ใช้ EEG จำลองเพื่อปรับระดับแสงระหว่างเซสชัน")
                 }
             }
         }
-        Column(Modifier.fillMaxWidth().background(C.bg)) {
-            Note(
-                "${areaName(a.quick.pts)} · Level ${a.actualLevel} · ${a.quick.pts.size} points",
-                Modifier.padding(start = 16.dp, top = 6.dp),
-            )
-            Row(
-                Modifier.fillMaxWidth()
-                    .background(C.bg)
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            Modifier.fillMaxWidth()
+                .background(C.bg)
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Action(
+                "Save",
+                Modifier.width(73.dp).height(56.dp),
+                primary = false,
+                enabled = a.quick.pts.isNotEmpty(),
             ) {
-                Action(
-                    "Save",
-                    Modifier.width(73.dp).height(56.dp),
-                    primary = false,
-                    enabled = a.quick.pts.isNotEmpty(),
-                ) {
-                    saving = true
-                }
-                val min =
-                    (makePlan(listOf(a.quickProgram()), a.actualLevel, a.closedLoop, false)
-                            .seconds / 60.0)
-                        .roundToInt()
-                Action(
-                    if (a.quick.pts.isEmpty()) "เลือกจุดก่อน"
-                    else "Start  ${a.quick.frequencyText} · $min min",
-                    Modifier.weight(1f).height(56.dp),
-                    enabled = a.quick.pts.isNotEmpty(),
-                ) {
-                    a.start(listOf(a.quickProgram()))
-                }
+                a.saveQuick()
+            }
+            val min =
+                (makePlan(listOf(a.quickProgram()), a.actualLevel, a.closedLoop, false).seconds /
+                        60.0)
+                    .roundToInt()
+            Action(
+                if (a.quick.pts.isEmpty()) "เลือกจุดก่อน"
+                else "Start  ${a.quick.frequencyText} · $min min",
+                Modifier.weight(1f).height(56.dp),
+                enabled = a.quick.pts.isNotEmpty(),
+            ) {
+                a.start(listOf(a.quickProgram()))
             }
         }
     }
-    if (saving)
-        SaveProgramDialog(
-            a.quickProgram().goal,
-            onDismiss = { saving = false },
-            onSave = {
-                a.saveQuick(it)
-                saving = false
-            },
-        )
 }
 
 @Composable
@@ -216,7 +177,6 @@ fun FrequencyEditor(s: Step, onChange: (Step) -> Unit, compact: Boolean = false)
     ) {
         onChange(s.copy(mode = it.lowercase()))
     }
-    if (s.mode == "sweep") Note("Sweep คือการไล่ความถี่จากค่าเริ่มต้นไปยังค่าปลายทาง")
     if (s.mode != "sweep") {
         if (!compact) {
             var slider by remember(s.f) { mutableFloatStateOf((log10(s.f) / 2 * 1000).toFloat()) }
@@ -713,7 +673,7 @@ fun ProgramScreen(a: AppState) {
                     )
                 }
                 if (p.note.isNotBlank()) Note(p.note)
-                if (a.repo.info.has(p.id)) Expandable("About this program") { AboutProgram(a, p) }
+                AboutProgram(a, p)
                 if (a.pro) {
                     if (p.src == "custom") {
                         FlowRow(
@@ -750,7 +710,6 @@ fun ProgramScreen(a: AppState) {
                 Action("+ Session", Modifier.weight(1f), primary = false) {
                     a.queue.add(QueueItem(p.id, a.programMinutes))
                     a.save()
-                    a.notice = "เพิ่ม ${p.name} ใน Today's Session แล้ว"
                     a.navigate(Screen.HOME)
                 }
                 val min =
@@ -994,6 +953,12 @@ fun BuilderScreen(a: AppState) {
                                 }
                             }
                             if (custom) {
+                                QuickOptionRow("Duration") {
+                                    Stepper(a.quickMinutes.toDouble(), "min", 1.0, 60.0) {
+                                        a.quickMinutes = it.toInt()
+                                        a.save()
+                                    }
+                                }
                                 HeadMap(
                                     s.pts,
                                     Modifier.align(Alignment.CenterHorizontally).width(220.dp),
@@ -1045,7 +1010,6 @@ fun BuilderScreen(a: AppState) {
                                 ) {
                                     a.updateStep(s.copy(power = if (it == "Gentle") 50 else 100))
                                 }
-                                Label("50% / 100% ของระดับเซสชัน", size = 11.5, color = C.muted)
                             }
                         }
                         Row(

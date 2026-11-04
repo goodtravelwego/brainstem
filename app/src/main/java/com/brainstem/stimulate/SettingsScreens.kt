@@ -109,7 +109,32 @@ fun SettingsScreen(a: AppState) {
                         }
                     }
                 }
-                Note("ใช้คำนวณปริมาณแสงจำลอง (J/cm²)")
+                Note("ใช้คำนวณปริมาณแสง (J/cm²) และส่งให้หมวก")
+            }
+            CardBox(radius = 16, gap = 8, padding = 16) {
+                Expandable("Developer · ESP32 commands & references", compactDisclosure = true) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Label(
+                            "// แอป → หมวก (BLE) ส่งครั้งเดียวต่อขั้น หมวกจับเวลาเอง\n{\"cmd\":\"step\",\"mask\":\"0x7FFFF\",\"mode\":\"sweep\",\"f1\":24,\"f2\":35,\"df\":1,\"dt\":55,\"duty\":${a.spec.duty},\"pat\":\"sync\",\"dur\":660}\n{\"cmd\":\"pause\"} {\"cmd\":\"resume\"} {\"cmd\":\"stop\"}",
+                            size = 10,
+                            mono = true,
+                        )
+                        Note(
+                            "mask = บิต 0–18 เรียงตาม ${POINTS.joinToString(" ")} · BLE หลุดเกิน 3 วินาที หมวกดับแสงเอง"
+                        )
+                        Note(
+                            "Native build: simulation only. No BLE service UUID or characteristic was provided."
+                        )
+                        listOf(
+                                "iMediSync. PBM Protocol Guide (iSyncWave)",
+                                "Gracefire Guide to Neuromodulation: Vielight NeuroPro 2",
+                                "Hamblin MR (2016). BBA Clinical 6:113–124.",
+                                "Salehpour F, et al. (2018). Mol Neurobiol 55:6601–6636.",
+                                "Zomorrodi R, et al. (2019). Sci Rep 9:6309.",
+                            )
+                            .forEach { Note(it) }
+                    }
+                }
             }
         }
         SettingsSection("Appearance")
@@ -133,11 +158,8 @@ fun SettingsScreen(a: AppState) {
                     Label(a.user?.name ?: "ผู้ใช้")
                     Note("${a.user?.age?:9} ปี")
                 }
-                TextButton(onClick = { a.profileOpen = true }, enabled = a.draft == null) {
-                    Label("เปลี่ยนผู้ใช้", color = if (a.draft == null) C.accent else C.muted)
-                }
+                Pill("เปลี่ยนผู้ใช้") { a.profileOpen = true }
             }
-            if (a.draft != null) Note("บันทึกหรือปิดฉบับร่างก่อนเปลี่ยนโปรไฟล์")
             Action("ประวัติการใช้งาน", primary = false) { a.navigate(Screen.HISTORY) }
             Action("ออกจากระบบ", primary = false) { a.logout() }
         }
@@ -288,15 +310,8 @@ fun HistoryScreen(a: AppState) {
                 "ไม่มีการใช้งานวันนี้",
                 Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
             )
-        if (records.isNotEmpty()) Note("แตะเซสชันเพื่อดูผลและรายละเอียด")
         records.forEach { r ->
-            CardBox(
-                modifier = Modifier.clickable { a.openHistoryRecord(r) },
-                padding = 12,
-                topPadding = 10,
-                bottomPadding = 10,
-                radius = 14,
-            ) {
+            CardBox(padding = 12, topPadding = 10, bottomPadding = 10, radius = 14) {
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -325,7 +340,6 @@ fun HistoryScreen(a: AppState) {
                     }
                     if (r.items.any { a.find(it.pid) != null })
                         Pill("Repeat") { a.repeatSession(r) }
-                    Label("›", size = 20, color = C.muted)
                 }
             }
         }

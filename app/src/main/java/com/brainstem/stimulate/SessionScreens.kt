@@ -85,16 +85,10 @@ fun RunScreen(a: AppState) {
                 Modifier.weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 16.dp),
+                    .padding(start = 18.dp, end = 18.dp, top = 52.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                SessionContextBar(a, allowSwitch = false)
-                Label(
-                    if (r.paused) "Paused" else "Session running",
-                    size = 14,
-                    weight = FontWeight.Medium,
-                )
                 Label(
                     if (s.phase.isNotEmpty()) "Closed-loop"
                     else r.plan.programs[s.programIndex].name,
@@ -325,7 +319,7 @@ else->"Measure"}} · EEG"
                     contentAlignment = Alignment.Center,
                 ) {
                     Label(
-                        "End session",
+                        "Stop",
                         size = 16,
                         color = if (dark) Color(0xFFFFB4A6) else Color(0xFFB23E2C),
                         weight = FontWeight.Medium,
@@ -341,7 +335,7 @@ fun SummaryScreen(a: AppState) {
     val r = a.summary ?: return
     val context = LocalContext.current
     LaunchedEffect(r.date) {
-        if (r.complete && !a.summaryFromHistory) {
+        if (r.complete) {
             runCatching { completionChime(context) }
         }
     }
@@ -361,15 +355,8 @@ fun SummaryScreen(a: AppState) {
                     color = if (r.complete) C.ok else C.muted,
                 )
             }
-            Title(if (r.complete) "Session Complete" else "Session Ended", size = 24)
+            Title(if (r.complete) "Session Complete" else "Stopped Early", size = 24)
             Note(r.items.joinToString(" → ") { it.name })
-            if (!r.complete) Label("Stopped Early", size = 14, color = C.muted)
-            if (!a.summarySaved) Note("This short session was not saved")
-            if (r.profileName.isNotBlank()) Note("โปรไฟล์: ${r.profileName}")
-            if (r.plannedSeconds > 0)
-                Note(
-                    "${timeText(r.seconds.toDouble())} of ${timeText(r.plannedSeconds.toDouble())}"
-                )
         }
         val used = r.dose.values.filter { it > 0 }
         val avg = if (used.isEmpty()) 0.0 else used.average()
@@ -378,7 +365,7 @@ fun SummaryScreen(a: AppState) {
             listOf(
                 timeText(r.seconds.toDouble()) to "เวลา",
                 "L${r.level}" to "ความแรง",
-                "%.2f".format(avg) to "J/cm² จำลอง",
+                "%.2f".format(avg) to "J/cm² เฉลี่ย (จำลอง)",
             )
         )
         if (r.closedLoop && r.deltas.isNotEmpty())
@@ -499,9 +486,6 @@ fun SummaryScreen(a: AppState) {
                     Label(timeText(item.seconds.toDouble()), size = 12, mono = true)
                 }
             }
-        Action(if (a.summaryFromHistory) "Back to History" else "View history", primary = false) {
-            a.navigate(Screen.HISTORY)
-        }
         Action("Back to Home") { a.navigate(Screen.HOME) }
     }
 }

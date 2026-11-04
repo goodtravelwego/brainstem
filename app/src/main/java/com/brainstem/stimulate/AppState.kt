@@ -28,7 +28,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false)
     var error by mutableStateOf("")
     var message by mutableStateOf("")
-    var notice by mutableStateOf("")
     var screen by mutableStateOf(Screen.HOME)
     var beforeSettings = Screen.HOME
     var category by mutableStateOf("relax")
@@ -53,14 +52,9 @@ class AppState(app: Application) : AndroidViewModel(app) {
     var draft by mutableStateOf<Program?>(null)
     var editStep by mutableIntStateOf(0)
     var buildFromNew = true
-    private var initialDraft: Program? = null
-    var draftExitOpen by mutableStateOf(false)
-    private var pendingDraftAction: (() -> Unit)? = null
     var engine by mutableStateOf<SessionEngine?>(null)
     var revision by mutableIntStateOf(0)
     var summary by mutableStateOf<SessionRecord?>(null)
-    var summaryFromHistory by mutableStateOf(false)
-    var summarySaved by mutableStateOf(false)
     var checkOpen by mutableStateOf(false)
     var profileOpen by mutableStateOf(false)
     var profileEditing by mutableStateOf<Profile?>(null)
@@ -68,24 +62,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
     var mailEmail by mutableStateOf("")
     var mailKind by mutableStateOf("")
     private var scopeKey = "guest"
-    val guestMode
-        get() = scopeKey == "guest"
-
-    val draftDirty
-        get(): Boolean {
-            val current = draft ?: return false
-            val original = initialDraft ?: return true
-            fun comparable(p: Program) =
-                p.copy(steps = p.steps.map { it.copy(label = "", pts = it.pts.sorted()) })
-            return comparable(current) != comparable(original)
-        }
-
-    private val editingDraft
-        get() =
-            draft != null &&
-                (screen == Screen.BUILDER ||
-                    (screen == Screen.SETTINGS && beforeSettings == Screen.BUILDER))
-
     val user
         get() = profiles.find { it.id == currentProfile } ?: profiles.firstOrNull()
 
@@ -123,7 +99,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
         profiles.addAll(
             j.optJSONArray("profiles")?.objects()?.map(::profileFrom)
                 ?: listOf(
-                    Profile("P-001", "น้องต้นกล้า (ตัวอย่าง)", 8),
+                    Profile("P-001", "น้องต้นกล้า", 8),
                     Profile("P-002", "คุณสมศรี (ตัวอย่าง)", 72, type = "care"),
                 )
         )
@@ -153,19 +129,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
                 }
             }
             .onFailure { repo.put("run.${profileKey()}", JSONObject()) }
-        val savedDraft = repo.read("draft.${profileKey()}")
-        if (engine == null && savedDraft.has("program")) {
-            runCatching {
-                    draft = programFrom(savedDraft.getJSONObject("program"))
-                    initialDraft = programFrom(savedDraft.getJSONObject("initial"))
-                    selected = savedDraft.optJSONObject("selected")?.let(::programFrom)
-                    editStep = savedDraft.optInt("step").coerceIn(0, draft!!.steps.lastIndex)
-                    buildFromNew = savedDraft.optBoolean("new")
-                    screen = Screen.BUILDER
-                    notice = "กู้คืนฉบับร่างแล้ว · ยังไม่ได้บันทึกเป็นโปรแกรม"
-                }
-                .onFailure { repo.put("draft.${profileKey()}", JSONObject()) }
-        }
     }
 
     private fun loadUser() {
@@ -230,17 +193,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
                     .put("fromQueue", r.plan.fromQueue)
                     .put("seed", r.seed)
                     .put("elapsed", r.elapsed),
-        )
-        repo.put(
-            "draft.${profileKey()}",
-            if (editingDraft)
-                JSONObject()
-                    .put("program", draft!!.json())
-                    .put("initial", initialDraft?.json() ?: draft!!.json())
-                    .put("selected", if (buildFromNew) JSONObject.NULL else selected?.json())
-                    .put("step", editStep)
-                    .put("new", buildFromNew)
-            else JSONObject(),
         )
     }
 
@@ -362,10 +314,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
     }
 
     fun logout() {
-        guardDraftExit { performLogout() }
-    }
-
-    private fun performLogout() {
         save()
         viewModelScope.launch {
             try {
@@ -383,10 +331,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
 
     fun switchProfile(id: String) {
         if (engine != null) return
-        guardDraftExit { performProfileSwitch(id) }
-    }
-
-    private fun performProfileSwitch(id: String) {
         save()
         currentProfile = id
         loadUser()
@@ -456,68 +400,19 @@ class AppState(app: Application) : AndroidViewModel(app) {
     }
 
     fun navigate(s: Screen) {
-        if (s == Screen.BUILDER || s == Screen.SETTINGS) performNavigate(s)
-        else guardDraftExit { performNavigate(s) }
-    }
-
-    private fun performNavigate(s: Screen) {
         if (s == Screen.SETTINGS) beforeSettings = screen
         screen = s
         error = ""
     }
 
     fun back() {
-        navigate(
+        screen =
             when (screen) {
                 Screen.SETTINGS -> beforeSettings
                 Screen.BUILDER -> if (buildFromNew) Screen.HOME else Screen.PROGRAM
-                Screen.SUMMARY -> if (summaryFromHistory) Screen.HISTORY else Screen.HOME
                 else -> Screen.HOME
             }
-        )
-    }
-
-    private fun guardDraftExit(action: () -> Unit) {
-        if (editingDraft && draftDirty) {
-            pendingDraftAction = action
-            draftExitOpen = true
-            profileOpen = false
-        } else {
-            if (editingDraft) clearDraft()
-            action()
-        }
-    }
-
-    private fun clearDraft() {
-        draft = null
-        initialDraft = null
-        draftExitOpen = false
-        pendingDraftAction = null
-        repo.put("draft.${profileKey()}", JSONObject())
-    }
-
-    fun keepEditingDraft() {
-        draftExitOpen = false
-        pendingDraftAction = null
-        screen = Screen.BUILDER
-    }
-
-    fun discardDraftAndLeave() {
-        val action = pendingDraftAction
-        clearDraft()
-        action?.invoke()
-    }
-
-    fun saveDraftAndLeave() {
-        val action = pendingDraftAction
-        if (saveDraft()) action?.invoke()
-    }
-
-    fun openHistoryRecord(record: SessionRecord) {
-        summary = record
-        summaryFromHistory = true
-        summarySaved = true
-        navigate(Screen.SUMMARY)
+        error = ""
     }
 
     fun find(id: String) = programs.find { it.id == id }
@@ -581,17 +476,13 @@ class AppState(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    fun saveQuick(name: String = quickProgram().goal) {
-        if (quick.pts.isEmpty() || name.isBlank()) return
+    fun saveQuick() {
         val p =
-            quickProgram().let {
-                it.copy(id = "c-${System.currentTimeMillis()}", name = name.trim().take(40))
-            }
+            quickProgram().let { it.copy(id = "c-${System.currentTimeMillis()}", name = it.goal) }
         customs.add(p)
         category = "custom"
         screen = Screen.HOME
         save()
-        notice = "บันทึกโปรแกรม ${p.name} แล้ว"
     }
 
     fun start(programs: List<Program>, fromQueue: Boolean = false) {
@@ -629,14 +520,11 @@ class AppState(app: Application) : AndroidViewModel(app) {
         if (!complete) r.endEarly()
         engine = null
         revision++
-        val record =
-            r.record(complete).copy(profileName = user?.name.orEmpty(), simulationSpeed = speed)
-        summary = record
-        summaryFromHistory = false
-        summarySaved = r.elapsed >= 5
-        screen = Screen.SUMMARY
         if (r.elapsed >= 5) {
+            val record = r.record(complete)
             history.add(record)
+            summary = record
+            screen = Screen.SUMMARY
             battery = (battery - maxOf(1, (r.elapsed / 300).roundToInt())).coerceAtLeast(5)
             if (complete && r.plan.fromQueue) queue.clear()
         }
@@ -651,7 +539,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
                 steps = listOf(Step(dur = 300)),
             )
         editStep = 0
-        initialDraft = draft
         buildFromNew = true
         screen = Screen.BUILDER
     }
@@ -668,7 +555,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
                 )
             else p.copy()
         editStep = selectedStep
-        initialDraft = draft
         buildFromNew = false
         screen = Screen.BUILDER
     }
@@ -715,24 +601,20 @@ class AppState(app: Application) : AndroidViewModel(app) {
         draft = d.copy(steps = list)
     }
 
-    fun saveDraft(): Boolean {
-        val p = draft ?: return false
+    fun saveDraft() {
+        val p = draft ?: return
         if (p.steps.any { it.pts.isEmpty() }) {
             error = "มีขั้นที่ยังไม่ได้เลือกจุดปล่อยแสง"
-            return false
+            return
         }
         if (p.name.isBlank()) {
             error = "กรุณาใส่ชื่อโปรแกรม"
-            return false
+            return
         }
         customs.removeAll { it.id == p.id }
         customs.add(p)
-        clearDraft()
-        error = ""
         save()
         open(p)
-        notice = "บันทึกโปรแกรม ${p.name} แล้ว"
-        return true
     }
 
     fun deleteProgram() {
