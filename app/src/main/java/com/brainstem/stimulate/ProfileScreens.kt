@@ -258,7 +258,7 @@ fun ProfileForm(a: AppState) {
                                 phone,
                                 { phone = it.take(30) },
                                 "เบอร์โทร",
-                                KeyboardType.Phone,
+                                keyboard = KeyboardType.Phone,
                             )
                         }
                     }

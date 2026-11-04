@@ -14,8 +14,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -26,20 +29,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
 import kotlin.math.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun BrainApp(a: AppState) {
     val context = LocalContext.current
     val p = C
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(a.notice) {
+        val message = a.notice
+        if (message.isNotBlank()) {
+            snackbar.showSnackbar(message)
+            if (a.notice == message) a.notice = ""
+        }
+    }
     BackHandler(
         enabled =
             a.loggedIn &&
                 (a.screen != Screen.HOME || a.engine != null || a.checkOpen || a.profileOpen)
     ) {
         when {
+            a.draftExitOpen -> a.keepEditingDraft()
             a.checkOpen -> a.checkOpen = false
             a.profileOpen -> a.profileOpen = false
-            a.engine != null -> a.pause()
+            a.engine != null -> a.pauseInBackground()
             else -> a.back()
         }
     }
@@ -83,6 +96,11 @@ fun BrainApp(a: AppState) {
             ) {
                 ProfileForm(a)
             }
+        SnackbarHost(
+            snackbar,
+            Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 96.dp),
+        )
+        if (a.draftExitOpen) DraftExitDialog(a)
         if (a.message.isNotBlank())
             AlertDialog(
                 onDismissRequest = { a.message = "" },
@@ -97,69 +115,84 @@ fun BrainApp(a: AppState) {
 
 @Composable
 private fun AppHeader(a: AppState) {
-    Row(
-        Modifier.fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 10.dp)
-            .heightIn(min = 36.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (a.screen != Screen.HOME)
-            Box(
-                Modifier.size(36.dp)
-                    .clip(CircleShape)
-                    .background(C.surface)
-                    .clickable { a.back() }
-                    .semantics { contentDescription = "ย้อนกลับ" },
-                contentAlignment = Alignment.Center,
-            ) {
-                LineIcon("back", Modifier.size(19.dp), C.ink)
+    Column {
+        Row(
+            Modifier.fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)
+                .heightIn(min = 48.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (a.screen != Screen.HOME)
+                Box(
+                    Modifier.size(36.dp)
+                        .clip(CircleShape)
+                        .background(C.surface)
+                        .clickable { a.back() }
+                        .semantics { contentDescription = "ย้อนกลับ" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    LineIcon("back", Modifier.size(19.dp), C.ink)
+                }
+            if (a.screen == Screen.HOME) {
+                Wordmark(19)
+                Label("PBM", size = 13, color = C.muted, display = true, weight = FontWeight.Medium)
+            } else {
+                Box(
+                    Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(C.accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Label("S", size = 17, color = Color.White, display = true)
+                }
+                Title(
+                    when (a.screen) {
+                        Screen.QUICK -> "Quick Start"
+                        Screen.PROGRAM -> "Program"
+                        Screen.BUILDER -> "Program Builder"
+                        Screen.SETTINGS -> "Settings"
+                        Screen.HISTORY -> "History"
+                        Screen.SUMMARY ->
+                            if (a.summaryFromHistory) "Session details"
+                            else if (a.summary?.complete == true) "Complete" else "Session ended"
+                        else -> "PBM"
+                    },
+                    modifier = Modifier.weight(1f),
+                    size = 19,
+                )
             }
-        if (a.screen == Screen.HOME) {
-            Wordmark(19)
-            Label("PBM", size = 13, color = C.muted, display = true, weight = FontWeight.Medium)
-        } else {
-            Box(
-                Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(C.accent),
-                contentAlignment = Alignment.Center,
-            ) {
-                Label("S", size = 17, color = Color.White, display = true)
-            }
-            Title(
-                when (a.screen) {
-                    Screen.QUICK -> "Quick Start"
-                    Screen.PROGRAM -> "Program"
-                    Screen.BUILDER -> "Program Builder"
-                    Screen.SETTINGS -> "Settings"
-                    Screen.HISTORY -> "History"
-                    Screen.SUMMARY -> "Complete"
-                    else -> "PBM"
-                },
-                modifier = Modifier.weight(1f),
-                size = 19,
-            )
+            if (a.screen == Screen.HOME) Spacer(Modifier.weight(1f))
+            if (a.screen == Screen.HOME)
+                TextButton(onClick = { a.navigate(Screen.HISTORY) }) {
+                    LineIcon("clock", Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Label("History", size = 13)
+                }
+            if (a.screen != Screen.SETTINGS)
+                Box(
+                    Modifier.size(36.dp)
+                        .clip(CircleShape)
+                        .background(C.surface)
+                        .clickable { a.navigate(Screen.SETTINGS) }
+                        .semantics { contentDescription = "ตั้งค่า" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    LineIcon("settings", Modifier.size(19.dp), C.ink)
+                }
         }
-        if (a.screen == Screen.HOME) Spacer(Modifier.weight(1f))
-        if (a.screen != Screen.SETTINGS)
-            Box(
-                Modifier.size(36.dp)
-                    .clip(CircleShape)
-                    .background(C.surface)
-                    .clickable { a.navigate(Screen.SETTINGS) }
-                    .semantics { contentDescription = "ตั้งค่า" },
-                contentAlignment = Alignment.Center,
-            ) {
-                LineIcon("settings", Modifier.size(19.dp), C.ink)
-            }
+        SessionContextBar(a, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
     }
 }
 
 @Composable
-fun ScreenColumn(key: Any, content: @Composable ColumnScope.() -> Unit) {
+fun ScreenColumn(
+    key: Any,
+    scrollState: ScrollState? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     key(key) {
         Column(
             Modifier.fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState ?: rememberScrollState())
                 .padding(horizontal = 16.dp)
                 .padding(top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -196,6 +229,10 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var reveal by remember { mutableStateOf(false) }
     var signup by rememberSaveable { mutableStateOf(false) }
+    var emailError by rememberSaveable { mutableStateOf(false) }
+    var passwordError by rememberSaveable { mutableStateOf(false) }
+    val emailFocus = remember { FocusRequester() }
+    val passwordFocus = remember { FocusRequester() }
     Column(
         Modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
@@ -246,7 +283,21 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Label("อีเมล", size = 16, weight = FontWeight.Medium)
-            InputField(email, { email = it }, "", KeyboardType.Email)
+            InputField(
+                email,
+                {
+                    email = it
+                    emailError = false
+                    a.error = ""
+                },
+                "",
+                modifier =
+                    Modifier.focusRequester(emailFocus).semantics { contentDescription = "อีเมล" },
+                keyboard = KeyboardType.Email,
+                isError = emailError,
+            )
+            if (emailError)
+                Label("กรอกอีเมลให้ถูกต้อง", size = 13, color = MaterialTheme.colorScheme.error)
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Label(
@@ -256,11 +307,21 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
             )
             BasicTextField(
                 password,
-                { password = it },
+                {
+                    password = it
+                    passwordError = false
+                    a.error = ""
+                },
                 Modifier.fillMaxWidth()
+                    .focusRequester(passwordFocus)
+                    .semantics { contentDescription = "รหัสผ่าน" }
                     .clip(RoundedCornerShape(12.dp))
                     .background(C.surface)
-                    .border(1.dp, C.line, RoundedCornerShape(12.dp)),
+                    .border(
+                        1.dp,
+                        if (passwordError) MaterialTheme.colorScheme.error else C.line,
+                        RoundedCornerShape(12.dp),
+                    ),
                 singleLine = true,
                 visualTransformation =
                     if (reveal) VisualTransformation.None else PasswordVisualTransformation(),
@@ -288,23 +349,39 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
                 textStyle =
                     androidx.compose.ui.text.TextStyle(
                         fontFamily = BodyFont,
-                        fontSize = 14.sp,
+                        fontSize = 16.sp,
                         lineHeight = 21.7.sp,
                         color = C.ink,
                     ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(C.accent),
             )
+            if (passwordError)
+                Label(
+                    "รหัสผ่านต้องมีอย่างน้อย 6 ตัว",
+                    size = 13,
+                    color = MaterialTheme.colorScheme.error,
+                )
         }
-        if (a.error.isNotBlank()) Label(a.error, size = 12, color = C.accent)
+        if (a.error.isNotBlank()) Label(a.error, size = 13, color = MaterialTheme.colorScheme.error)
         Action(
             if (a.busy) "กำลังส่ง…" else if (signup) "สมัครสมาชิก" else "เข้าสู่ระบบ",
             enabled = !a.busy,
         ) {
-            a.signIn(email, password, signup)
+            emailError = !android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+            passwordError = password.length < 6
+            when {
+                emailError -> emailFocus.requestFocus()
+                passwordError -> passwordFocus.requestFocus()
+                else -> a.signIn(email, password, signup)
+            }
         }
         if (!signup)
             TextButton(
-                onClick = { a.recover(email) },
+                onClick = {
+                    emailError =
+                        !android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+                    if (emailError) emailFocus.requestFocus() else a.recover(email)
+                },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 enabled = !a.busy,
             ) {
@@ -318,6 +395,8 @@ fun LoginScreen(a: AppState, onGoogle: () -> Unit) {
             TextButton(
                 onClick = {
                     signup = !signup
+                    emailError = false
+                    passwordError = false
                     a.error = ""
                 }
             ) {
@@ -339,22 +418,29 @@ fun InputField(
     value: String,
     onChange: (String) -> Unit,
     label: String,
+    modifier: Modifier = Modifier,
     keyboard: KeyboardType = KeyboardType.Text,
+    isError: Boolean = false,
 ) {
     BasicTextField(
         value,
         onChange,
-        Modifier.fillMaxWidth()
+        modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(C.surface)
-            .border(1.dp, C.line, RoundedCornerShape(12.dp))
+            .border(
+                1.dp,
+                if (isError) MaterialTheme.colorScheme.error else C.line,
+                RoundedCornerShape(12.dp),
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
         textStyle =
             androidx.compose.ui.text.TextStyle(
                 fontFamily = BodyFont,
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 lineHeight = 21.7.sp,
                 color = C.ink,
             ),
@@ -370,175 +456,174 @@ fun InputField(
 
 @Composable
 fun HomeScreen(a: AppState) {
-    Box(Modifier.fillMaxSize()) {
-        ScreenColumn("home") {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    var programsTop by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f)) {
+            ScreenColumn("home", scrollState = scroll) {
                 Row(
-                    Modifier.clip(CircleShape)
-                        .background(C.surface)
-                        .border(1.dp, C.line, CircleShape)
-                        .padding(start = 9.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+                    Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Box(
-                        Modifier.width(22.dp)
-                            .height(11.dp)
-                            .border(1.5.dp, C.ink, RoundedCornerShape(3.dp))
-                            .padding(2.dp)
+                    Row(
+                        Modifier.clip(CircleShape)
+                            .background(C.surface)
+                            .border(1.dp, C.line, CircleShape)
+                            .padding(start = 9.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
                     ) {
                         Box(
-                            Modifier.fillMaxHeight().fillMaxWidth(a.battery / 100f).background(C.ok)
+                            Modifier.width(22.dp)
+                                .height(11.dp)
+                                .border(1.5.dp, C.ink, RoundedCornerShape(3.dp))
+                                .padding(2.dp)
+                        ) {
+                            Box(
+                                Modifier.fillMaxHeight()
+                                    .fillMaxWidth(a.battery / 100f)
+                                    .background(C.ok)
+                            )
+                        }
+                        Label(
+                            "Demo ${a.battery}%",
+                            size = 12,
+                            color = C.ink,
+                            weight = FontWeight.SemiBold,
+                            mono = true,
                         )
                     }
-                    Label(
-                        "${a.battery}%",
-                        size = 12,
-                        color = C.ink,
-                        weight = FontWeight.SemiBold,
-                        mono = true,
-                    )
-                }
-                val daily = weeklyMinutes(a.history)
-                Row(
-                    Modifier.weight(1f)
-                        .height(31.dp)
-                        .clip(CircleShape)
-                        .background(C.surface)
-                        .border(1.dp, C.line, CircleShape)
-                        .clickable { a.navigate(Screen.HISTORY) }
-                        .padding(start = 13.dp, end = 9.dp, top = 5.dp, bottom = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                    val daily = weeklyMinutes(a.history)
                     Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Label("7 วัน", size = 11, color = C.muted)
-                        Label("${daily.sum()} min", size = 12.5, weight = FontWeight.Medium)
-                    }
-                    Row(
-                        Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        Modifier.weight(1f)
+                            .height(31.dp)
+                            .clip(CircleShape)
+                            .background(C.surface)
+                            .border(1.dp, C.line, CircleShape)
+                            .clickable { a.navigate(Screen.HISTORY) }
+                            .padding(start = 13.dp, end = 9.dp, top = 5.dp, bottom = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        daily.forEachIndexed { i, minutes ->
-                            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                                Box(
-                                    Modifier.widthIn(max = 11.dp)
-                                        .fillMaxWidth()
-                                        .aspectRatio(1f)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(C.surface2)
-                                        .then(
-                                            if (i == 6)
-                                                Modifier.border(
-                                                    1.5.dp,
-                                                    C.accent,
-                                                    RoundedCornerShape(3.dp),
-                                                )
-                                            else Modifier
-                                        )
-                                ) {
-                                    if (minutes > 0)
-                                        Box(
-                                            Modifier.fillMaxSize()
-                                                .background(
-                                                    C.accent.copy(
-                                                        alpha = minOf(1f, .35f + minutes / 30f)
+                        Row(
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Label("7 วัน", size = 11, color = C.muted)
+                            Label("${daily.sum()} min", size = 12.5, weight = FontWeight.Medium)
+                        }
+                        Row(
+                            Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            daily.forEachIndexed { i, minutes ->
+                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                    Box(
+                                        Modifier.widthIn(max = 11.dp)
+                                            .fillMaxWidth()
+                                            .aspectRatio(1f)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(C.surface2)
+                                            .then(
+                                                if (i == 6)
+                                                    Modifier.border(
+                                                        1.5.dp,
+                                                        C.accent,
+                                                        RoundedCornerShape(3.dp),
                                                     )
-                                                )
-                                        )
+                                                else Modifier
+                                            )
+                                    ) {
+                                        if (minutes > 0)
+                                            Box(
+                                                Modifier.fillMaxSize()
+                                                    .background(
+                                                        C.accent.copy(
+                                                            alpha = minOf(1f, .35f + minutes / 30f)
+                                                        )
+                                                    )
+                                            )
+                                    }
                                 }
                             }
                         }
+                        Label("${daily.count{it>0}}/7", size = 11, color = C.muted, mono = true)
+                        Text(
+                            "›",
+                            fontSize = 15.sp,
+                            lineHeight = 15.sp,
+                            color = C.muted,
+                            fontFamily = BodyFont,
+                        )
                     }
-                    Label("${daily.count{it>0}}/7", size = 11, color = C.muted, mono = true)
-                    Text(
-                        "›",
-                        fontSize = 15.sp,
-                        lineHeight = 15.sp,
-                        color = C.muted,
-                        fontFamily = BodyFont,
-                    )
                 }
-            }
-            SessionCard(a)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Title("Programs", size = 15)
-                Spacer(Modifier.weight(1f))
-                if (a.pro)
-                    Box(Modifier.clickable { a.newProgram() }.padding(horizontal = 8.dp)) {
-                        Label("+ New", size = 13.5, color = C.accent, weight = FontWeight.Medium)
-                    }
-                Toggle("Pro", a.pro) { a.togglePro() }
-            }
-            val cats = linkedMapOf("relax" to "Relax", "focus" to "Focus", "learn" to "Learn")
-            if (a.customs.isNotEmpty()) cats["custom"] = "My Programs"
-            if (a.favorites.isNotEmpty()) cats["fav"] = "★ Favorites"
-            if (a.category !in cats) a.category = "relax"
-            ChipRow(cats.values.toList(), cats[a.category].orEmpty()) { label ->
-                a.category = cats.entries.first { it.value == label }.key
-            }
-            Column {
-                a.programs
-                    .filter {
-                        if (a.category == "fav") it.id in a.favorites else it.cat == a.category
-                    }
-                    .forEach { p -> ProgramRow(a, p) }
-            }
-            // The reference links this card to Evaluate. Evaluate is excluded by the requested
-            // scope.
-            Row(
-                Modifier.fillMaxWidth()
-                    .dashedBorder(C.line)
-                    .padding(horizontal = 13.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(
-                    Modifier.size(30.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(C.accent.copy(alpha = .1f)),
-                    contentAlignment = Alignment.Center,
+                SessionCard(a) { scope.launch { scroll.animateScrollTo(programsTop) } }
+                Row(
+                    Modifier.fillMaxWidth().onGloballyPositioned {
+                        programsTop = it.positionInParent().y.roundToInt()
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    LineIcon("pulse", Modifier.size(16.dp))
+                    Title("Programs", size = 15)
+                    Spacer(Modifier.weight(1f))
+                    if (a.pro)
+                        Box(Modifier.clickable { a.newProgram() }.padding(horizontal = 8.dp)) {
+                            Label(
+                                "+ New",
+                                size = 13.5,
+                                color = C.accent,
+                                weight = FontWeight.Medium,
+                            )
+                        }
+                    Toggle("Pro", a.pro) { a.togglePro() }
                 }
-                Column(Modifier.weight(1f)) {
-                    Label("Alpha ของคุณ", size = 13.5, weight = FontWeight.Medium)
-                    Label("ยังไม่มี · ใช้ความถี่เริ่มต้นของโปรแกรม", size = 11.5, color = C.muted)
+                val cats = linkedMapOf("relax" to "Relax", "focus" to "Focus", "learn" to "Learn")
+                if (a.customs.isNotEmpty()) cats["custom"] = "My Programs"
+                if (a.favorites.isNotEmpty()) cats["fav"] = "★ Favorites"
+                if (a.category !in cats) a.category = "relax"
+                ChipRow(cats.values.toList(), cats[a.category].orEmpty()) { label ->
+                    a.category = cats.entries.first { it.value == label }.key
+                }
+                Column {
+                    a.programs
+                        .filter {
+                            if (a.category == "fav") it.id in a.favorites else it.cat == a.category
+                        }
+                        .forEach { p -> ProgramRow(a, p) }
+                }
+                // The reference links this card to Evaluate. Evaluate is excluded by the requested
+                // scope.
+                Row(
+                    Modifier.fillMaxWidth()
+                        .dashedBorder(C.line)
+                        .padding(horizontal = 13.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Box(
+                        Modifier.size(30.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(C.accent.copy(alpha = .1f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        LineIcon("pulse", Modifier.size(16.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Label("Alpha ของคุณ", size = 13.5, weight = FontWeight.Medium)
+                        Label(
+                            "ยังไม่มี · ใช้ความถี่เริ่มต้นของโปรแกรม",
+                            size = 11.5,
+                            color = C.muted,
+                        )
+                    }
                 }
             }
-            Spacer(Modifier.height(80.dp))
         }
-        Row(
-            Modifier.align(Alignment.BottomCenter)
-                .padding(bottom = 18.dp)
-                .shadow(
-                    12.dp,
-                    CircleShape,
-                    ambientColor = C.accent.copy(alpha = .65f),
-                    spotColor = C.accent.copy(alpha = .65f),
-                )
-                .clip(CircleShape)
-                .background(C.accent)
-                .clickable { a.navigate(Screen.QUICK) }
-                .padding(start = 14.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                Modifier.size(26.dp).clip(CircleShape).background(Color.White.copy(alpha = .2f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Label("+", size = 21, color = Color.White)
-            }
-            Label("Quick Start", size = 15, color = Color.White, weight = FontWeight.Medium)
+        Box(Modifier.fillMaxWidth().background(C.bg).padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Action("Quick Start", primary = false) { a.navigate(Screen.QUICK) }
         }
     }
 }
@@ -640,7 +725,7 @@ private fun ProgramDescription(goal: String, kind: String, evidence: String) {
 }
 
 @Composable
-private fun SessionCard(a: AppState) {
+private fun SessionCard(a: AppState, onChooseProgram: () -> Unit) {
     val q = a.queue
     CardBox(accent = q.isNotEmpty(), radius = 24, gap = 12, insetBorder = true) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -652,20 +737,10 @@ private fun SessionCard(a: AppState) {
                     "${q.sumOf { it.minutes }} min · ${q.size} program${if (q.size > 1) "s" else ""}"
             )
         }
-        if (q.isEmpty())
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(
-                    Modifier.size(32.dp).clip(CircleShape).background(C.accent.copy(alpha = .1f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Label("+", size = 18, color = C.accent)
-                }
-                Label("แตะ + ที่โปรแกรมด้านล่างเพื่อเพิ่มเข้าเซสชัน", size = 13, color = C.muted)
-            }
-        else {
+        if (q.isEmpty()) {
+            Note("เลือกโปรแกรมจาก Relax, Focus หรือ Learn เพื่อจัดเซสชัน")
+            Action("Choose a program", primary = false, onClick = onChooseProgram)
+        } else {
             Timeline(q.flatMap { a.find(it.pid)?.scaled(it.minutes)?.steps ?: emptyList() })
             q.forEachIndexed { i, item ->
                 Row(

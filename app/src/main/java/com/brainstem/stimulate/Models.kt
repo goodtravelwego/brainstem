@@ -274,6 +274,9 @@ data class SessionRecord(
     val iapf: Double = 0.0,
     val initialLevel: Int = level,
     val events: List<String> = emptyList(),
+    val plannedSeconds: Int = 0,
+    val profileName: String = "",
+    val simulationSpeed: Int = 0,
 )
 
 fun weeklyMinutes(
@@ -513,6 +516,7 @@ class SessionEngine(val plan: RunPlan, val spec: Spec, val seed: Long = Random.n
             iapf = iapf,
             initialLevel = plan.level,
             events = events.takeLast(6),
+            plannedSeconds = plan.seconds,
         )
 }
 

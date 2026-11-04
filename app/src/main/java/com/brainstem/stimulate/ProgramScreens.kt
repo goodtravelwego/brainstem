@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -21,6 +22,8 @@ import kotlin.math.*
 
 @Composable
 fun QuickScreen(a: AppState) {
+    var showPoints by rememberSaveable { mutableStateOf(false) }
+    var saving by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             ScreenColumn("quick") {
@@ -48,25 +51,50 @@ fun QuickScreen(a: AppState) {
                                 a.save()
                             }
                             QuickSelection("Clear") {
+                                showPoints = true
                                 a.quick = s.copy(pts = emptyList())
                                 a.save()
                             }
                         }
                     }
-                    HeadMap(s.pts, Modifier.align(Alignment.CenterHorizontally).width(240.dp)) { n
-                        ->
-                        a.quick =
-                            s.copy(
-                                pts = POINTS.filter { if (it == n) it !in s.pts else it in s.pts }
-                            )
-                        a.save()
+                    QuickOptionRow("Duration") {
+                        Stepper(a.quickMinutes.toDouble(), "min", 1.0, 60.0) {
+                            a.quickMinutes = it.toInt()
+                            a.save()
+                        }
                     }
-                    Label(
-                        "แตะจุดเพื่อเลือก / เอาออก",
-                        Modifier.align(Alignment.CenterHorizontally),
-                        size = 11.5,
-                        color = C.muted,
-                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        AREAS.forEach { (name, points) ->
+                            Pill(name, selected = !showPoints && s.pts.toSet() == points.toSet()) {
+                                a.quick = s.copy(pts = points)
+                                showPoints = false
+                                a.save()
+                            }
+                        }
+                        Pill("Custom…", selected = showPoints) { showPoints = true }
+                    }
+                    if (showPoints) {
+                        HeadMap(
+                            s.pts,
+                            Modifier.align(Alignment.CenterHorizontally).width(240.dp),
+                        ) { n ->
+                            a.quick =
+                                s.copy(
+                                    pts =
+                                        POINTS.filter { if (it == n) it !in s.pts else it in s.pts }
+                                )
+                            a.save()
+                        }
+                        Label(
+                            "แตะจุดเพื่อเลือก / เอาออก",
+                            Modifier.align(Alignment.CenterHorizontally),
+                            size = 11.5,
+                            color = C.muted,
+                        )
+                    }
                     Column(Modifier.padding(top = 2.dp)) {
                         HorizontalDivider(color = C.line)
                         Spacer(Modifier.height(2.dp))
@@ -102,13 +130,6 @@ fun QuickScreen(a: AppState) {
                     )
                 }
                 CardBox(padding = 14, topPadding = 4, bottomPadding = 4, radius = 24, gap = 0) {
-                    QuickOptionRow("Duration") {
-                        Stepper(a.quickMinutes.toDouble(), "min", 1.0, 60.0) {
-                            a.quickMinutes = it.toInt()
-                            a.save()
-                        }
-                    }
-                    HorizontalDivider(color = C.line)
                     QuickOptionRow("Intensity") { Intensity(a) }
                     HorizontalDivider(color = C.line)
                     if (a.pro) {
@@ -124,6 +145,7 @@ fun QuickScreen(a: AppState) {
                                 a.save()
                             }
                         }
+                        Note("Duty คือสัดส่วนเวลาที่ไฟติดในแต่ละรอบ ใช้คำนวณแสงจำลอง")
                         HorizontalDivider(color = C.line)
                     }
                     QuickOptionRow("EEG Closed-loop") {
@@ -131,37 +153,53 @@ fun QuickScreen(a: AppState) {
                             a.requestClosedLoop()
                         }
                     }
+                    Note("Closed-loop ใช้ EEG จำลองเพื่อปรับระดับแสงระหว่างเซสชัน")
                 }
             }
         }
-        Row(
-            Modifier.fillMaxWidth()
-                .background(C.bg)
-                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Action(
-                "Save",
-                Modifier.width(73.dp).height(56.dp),
-                primary = false,
-                enabled = a.quick.pts.isNotEmpty(),
+        Column(Modifier.fillMaxWidth().background(C.bg)) {
+            Note(
+                "${areaName(a.quick.pts)} · Level ${a.actualLevel} · ${a.quick.pts.size} points",
+                Modifier.padding(start = 16.dp, top = 6.dp),
+            )
+            Row(
+                Modifier.fillMaxWidth()
+                    .background(C.bg)
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                a.saveQuick()
-            }
-            val min =
-                (makePlan(listOf(a.quickProgram()), a.actualLevel, a.closedLoop, false).seconds /
-                        60.0)
-                    .roundToInt()
-            Action(
-                if (a.quick.pts.isEmpty()) "เลือกจุดก่อน"
-                else "Start  ${a.quick.frequencyText} · $min min",
-                Modifier.weight(1f).height(56.dp),
-                enabled = a.quick.pts.isNotEmpty(),
-            ) {
-                a.start(listOf(a.quickProgram()))
+                Action(
+                    "Save",
+                    Modifier.width(73.dp).height(56.dp),
+                    primary = false,
+                    enabled = a.quick.pts.isNotEmpty(),
+                ) {
+                    saving = true
+                }
+                val min =
+                    (makePlan(listOf(a.quickProgram()), a.actualLevel, a.closedLoop, false)
+                            .seconds / 60.0)
+                        .roundToInt()
+                Action(
+                    if (a.quick.pts.isEmpty()) "เลือกจุดก่อน"
+                    else "Start  ${a.quick.frequencyText} · $min min",
+                    Modifier.weight(1f).height(56.dp),
+                    enabled = a.quick.pts.isNotEmpty(),
+                ) {
+                    a.start(listOf(a.quickProgram()))
+                }
             }
         }
     }
+    if (saving)
+        SaveProgramDialog(
+            a.quickProgram().goal,
+            onDismiss = { saving = false },
+            onSave = {
+                a.saveQuick(it)
+                saving = false
+            },
+        )
 }
 
 @Composable
@@ -178,6 +216,7 @@ fun FrequencyEditor(s: Step, onChange: (Step) -> Unit, compact: Boolean = false)
     ) {
         onChange(s.copy(mode = it.lowercase()))
     }
+    if (s.mode == "sweep") Note("Sweep คือการไล่ความถี่จากค่าเริ่มต้นไปยังค่าปลายทาง")
     if (s.mode != "sweep") {
         if (!compact) {
             var slider by remember(s.f) { mutableFloatStateOf((log10(s.f) / 2 * 1000).toFloat()) }
@@ -577,117 +616,148 @@ fun ProgramScreen(a: AppState) {
     val index = a.selectedStep.coerceIn(0, scaled.steps.lastIndex)
     val step = scaled.steps[index]
     var deleting by remember { mutableStateOf(false) }
-    ScreenColumn(p.id) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Title(p.name, Modifier.weight(1f), size = 24)
-                Box(
-                    Modifier.size(36.dp)
-                        .clip(CircleShape)
-                        .clickable { a.toggleFavorite(p.id) }
-                        .semantics { contentDescription = "ติดดาว" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    LineIcon("star", color = if (p.id in a.favorites) Color(0xFFE09A12) else C.line)
-                }
-            }
-            Note("${p.frequencyText} · ${p.goal}")
-        }
-        if (p.alpha)
-            Label("α  ย่านอัลฟาจะปรับตาม IAPF เมื่อวัดใน Evaluate แล้ว", size = 11, color = C.muted)
-        HeadMap(step.pts, Modifier.align(Alignment.CenterHorizontally).width(210.dp))
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Label(step.label, size = 14, weight = FontWeight.Medium)
-            Note(
-                "${a.repo.regionCaption(step.pts)} · ${step.frequencyText} · ${timeText(step.dur.toDouble())}" +
-                    if (a.pro) " · duty ${step.duty.takeIf{it>0}?:a.spec.duty}%" else ""
-            )
-        }
-        Timeline(scaled.steps, selected = index, big = true)
-        if (scaled.steps.size > 1)
-            Column {
-                scaled.steps.forEachIndexed { i, s ->
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (i == index) C.surface else Color.Transparent)
-                            .clickable { a.selectedStep = i }
-                            .padding(horizontal = 6.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f)) {
+            ScreenColumn(p.id) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Title(p.name, Modifier.weight(1f), size = 24)
                         Box(
-                            Modifier.width(8.dp)
-                                .height(22.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(stepBrush(s))
-                        )
-                        Label(s.label, Modifier.weight(1f), size = 13.5)
-                        Label(
-                            s.frequencyText,
-                            size = 12,
-                            color = C.muted.copy(alpha = .7f),
-                            mono = true,
-                        )
-                        Label(timeText(s.dur.toDouble()), size = 12, color = C.muted, mono = true)
+                            Modifier.size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { a.toggleFavorite(p.id) }
+                                .semantics { contentDescription = "ติดดาว" },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            LineIcon(
+                                "star",
+                                color = if (p.id in a.favorites) Color(0xFFE09A12) else C.line,
+                            )
+                        }
                     }
+                    Note("${p.frequencyText} · ${p.goal}")
                 }
-            }
-        // The reference's empty step-list still occupies a flex gap.
-        if (scaled.steps.size == 1) Spacer(Modifier.height(0.dp))
-        CardBox(padding = 14, radius = 18, gap = 10) {
-            OptionRow("Duration") {
-                Stepper(a.programMinutes.toDouble(), "min", 1.0, 60.0) {
-                    a.programMinutes = it.toInt()
-                }
-            }
-            OptionRow("Intensity") { Intensity(a) }
-            OptionRow("EEG Closed-loop") {
-                Toggle(if (a.closedLoop) "On" else "Off", a.closedLoop) { a.requestClosedLoop() }
-            }
-            Note(
-                (if (a.programMinutes != p.minutes) "ปกติ ${p.minutes} นาที · " else "") +
-                    "Level ${a.actualLevel} · ${a.actualLevel*10}%" +
-                    (if (a.actualLevel == 1) " (แนะนำ)" else " · แนะนำ Level 1") +
-                    if (a.closedLoop) " · Closed-loop: วัด EEG ระหว่างพัก · ลดแสงเองถ้า high-β สูง"
-                    else ""
-            )
-        }
-        if (p.note.isNotBlank()) Note(p.note)
-        AboutProgram(a, p)
-        if (a.pro) {
-            if (p.src == "custom") {
-                FlowRow(
+                if (p.alpha)
+                    Label(
+                        "α  ย่านอัลฟาจะปรับตาม IAPF เมื่อวัดใน Evaluate แล้ว",
+                        size = 11,
+                        color = C.muted,
+                    )
+                HeadMap(step.pts, Modifier.align(Alignment.CenterHorizontally).width(210.dp))
+                Column(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    ProgramActionButton("Edit", "edit") { a.editProgram(false) }
-                    ProgramActionButton("Duplicate", "copy") { a.editProgram(true) }
-                    ProgramActionButton(
-                        "Delete",
-                        "trash",
-                        color = Color(if (C.bg == Dark.bg) 0xFFE8735E else 0xFFB13E2C),
-                    ) {
-                        deleting = true
-                    }
+                    Label(step.label, size = 14, weight = FontWeight.Medium)
+                    Note(
+                        "${a.repo.regionCaption(step.pts)} · ${step.frequencyText} · ${timeText(step.dur.toDouble())}" +
+                            if (a.pro) " · duty ${step.duty.takeIf{it>0}?:a.spec.duty}%" else ""
+                    )
                 }
-            } else {
-                ProgramActionButton("Duplicate & Edit", "copy", Modifier.fillMaxWidth()) {
-                    a.editProgram(true)
+                Timeline(scaled.steps, selected = index, big = true)
+                if (scaled.steps.size > 1)
+                    Column {
+                        scaled.steps.forEachIndexed { i, s ->
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (i == index) C.surface else Color.Transparent)
+                                    .clickable { a.selectedStep = i }
+                                    .padding(horizontal = 6.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Box(
+                                    Modifier.width(8.dp)
+                                        .height(22.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(stepBrush(s))
+                                )
+                                Label(s.label, Modifier.weight(1f), size = 13.5)
+                                Label(
+                                    s.frequencyText,
+                                    size = 12,
+                                    color = C.muted.copy(alpha = .7f),
+                                    mono = true,
+                                )
+                                Label(
+                                    timeText(s.dur.toDouble()),
+                                    size = 12,
+                                    color = C.muted,
+                                    mono = true,
+                                )
+                            }
+                        }
+                    }
+                // The reference's empty step-list still occupies a flex gap.
+                if (scaled.steps.size == 1) Spacer(Modifier.height(0.dp))
+                CardBox(padding = 14, radius = 18, gap = 10) {
+                    OptionRow("Duration") {
+                        Stepper(a.programMinutes.toDouble(), "min", 1.0, 60.0) {
+                            a.programMinutes = it.toInt()
+                        }
+                    }
+                    OptionRow("Intensity") { Intensity(a) }
+                    OptionRow("EEG Closed-loop") {
+                        Toggle(if (a.closedLoop) "On" else "Off", a.closedLoop) {
+                            a.requestClosedLoop()
+                        }
+                    }
+                    Note(
+                        (if (a.programMinutes != p.minutes) "ปกติ ${p.minutes} นาที · " else "") +
+                            "Level ${a.actualLevel} · ${a.actualLevel*10}%" +
+                            (if (a.actualLevel == 1) " (แนะนำ)" else " · แนะนำ Level 1") +
+                            if (a.closedLoop)
+                                " · Closed-loop: วัด EEG ระหว่างพัก · ลดแสงเองถ้า high-β สูง"
+                            else ""
+                    )
+                }
+                if (p.note.isNotBlank()) Note(p.note)
+                if (a.repo.info.has(p.id)) Expandable("About this program") { AboutProgram(a, p) }
+                if (a.pro) {
+                    if (p.src == "custom") {
+                        FlowRow(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            ProgramActionButton("Edit", "edit") { a.editProgram(false) }
+                            ProgramActionButton("Duplicate", "copy") { a.editProgram(true) }
+                            ProgramActionButton(
+                                "Delete",
+                                "trash",
+                                color = Color(if (C.bg == Dark.bg) 0xFFE8735E else 0xFFB13E2C),
+                            ) {
+                                deleting = true
+                            }
+                        }
+                    } else {
+                        ProgramActionButton("Duplicate & Edit", "copy", Modifier.fillMaxWidth()) {
+                            a.editProgram(true)
+                        }
+                    }
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Action("+ Session", Modifier.weight(1f), primary = false) {
-                a.queue.add(QueueItem(p.id, a.programMinutes))
-                a.save()
-                a.navigate(Screen.HOME)
+        Column(
+            Modifier.fillMaxWidth()
+                .background(C.bg)
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Note("${p.name} · ${a.programMinutes} min · Level ${a.actualLevel}")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Action("+ Session", Modifier.weight(1f), primary = false) {
+                    a.queue.add(QueueItem(p.id, a.programMinutes))
+                    a.save()
+                    a.notice = "เพิ่ม ${p.name} ใน Today's Session แล้ว"
+                    a.navigate(Screen.HOME)
+                }
+                val min =
+                    (makePlan(listOf(scaled), a.actualLevel, a.closedLoop, false).seconds / 60.0)
+                        .roundToInt()
+                Action("Start  $min min", Modifier.weight(1.4f)) { a.start(listOf(scaled)) }
             }
-            val min =
-                (makePlan(listOf(scaled), a.actualLevel, a.closedLoop, false).seconds / 60.0)
-                    .roundToInt()
-            Action("Start  $min min", Modifier.weight(1.4f)) { a.start(listOf(scaled)) }
         }
     }
     if (deleting)
@@ -975,6 +1045,7 @@ fun BuilderScreen(a: AppState) {
                                 ) {
                                     a.updateStep(s.copy(power = if (it == "Gentle") 50 else 100))
                                 }
+                                Label("50% / 100% ของระดับเซสชัน", size = 11.5, color = C.muted)
                             }
                         }
                         Row(

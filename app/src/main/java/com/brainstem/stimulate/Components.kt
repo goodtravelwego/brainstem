@@ -531,7 +531,7 @@ fun Action(
             .padding(horizontal = 12.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val color = if (primary) Color.White else C.ink
+        val color = (if (primary) Color.White else C.ink).copy(alpha = if (enabled) 1f else .4f)
         val subtitleAt = text.indexOf("  ")
         if (text.startsWith("Start Session") && subtitleAt >= 0) {
             Row(

@@ -19,6 +19,12 @@ class StimulateFlowTest {
     private val state
         get() = ViewModelProvider(rule.activity)[AppState::class.java]
 
+    private fun discardIfAsked() {
+        if (rule.onAllNodesWithText("Discard changes").fetchSemanticsNodes().isNotEmpty()) {
+            rule.onNodeWithText("Discard changes").performClick()
+        }
+    }
+
     private fun snapshot(name: String) {
         rule.waitForIdle()
         // Platform ripples animate on the render thread, outside the Compose test clock.
@@ -132,7 +138,7 @@ class StimulateFlowTest {
             density,
         )
         assertEquals(36.15f * density, duplicateBounds.height, density)
-        rule.onNodeWithText("Start  10 min").performScrollTo()
+        rule.onNodeWithText("Start  10 min").assertIsDisplayed()
         snapshot("22-program-actions")
         duplicate.performClick()
         rule.onNodeWithText("Alpha Calm (copy)").assertIsDisplayed()
@@ -172,13 +178,16 @@ class StimulateFlowTest {
         rule.runOnIdle { assertEquals(1, state.draft!!.steps.size) }
         rule.onNodeWithContentDescription("ลบ").assertIsNotEnabled()
         rule.onNodeWithText("Cancel").performScrollTo().performClick()
+        discardIfAsked()
         rule.runOnIdle {
             state.pro = false
             assertEquals(Screen.PROGRAM, state.screen)
         }
-        rule.onNodeWithText("+ Session").performScrollTo().performClick()
+        rule.onNodeWithText("+ Session").assertIsDisplayed().performClick()
         rule.runOnIdle { assertEquals("std-alpha", state.queue.single().pid) }
         snapshot("04-session-queue")
+        // The confirmation Snackbar temporarily covers lower scrolling content.
+        rule.waitUntil(6000) { state.notice.isEmpty() }
         rule.onNodeWithText("Quick Start").performClick()
         rule.onNodeWithContentDescription("ตั้งค่า").assertIsDisplayed()
         rule.onNodeWithText("Clear", useUnmergedTree = true).performClick()
@@ -189,13 +198,14 @@ class StimulateFlowTest {
         rule.runOnIdle { assertTrue(state.quick.pts.isEmpty()) }
         rule.onNodeWithText("All", useUnmergedTree = true).performClick()
         snapshot("05-quick-start")
+        rule.onNodeWithContentDescription("เพิ่มความถี่").performScrollTo()
         rule.onNodeWithText("Sweep", useUnmergedTree = true).performClick()
-        rule.onNodeWithText("Broad", useUnmergedTree = true).performScrollTo().performClick()
+        rule.onNodeWithText("Broad").performScrollTo().performClick()
+        snapshot("06-sweep")
         rule.runOnIdle {
             assertEquals(1.0, state.quick.f1, 0.0)
             assertEquals(45.0, state.quick.f2, 0.0)
         }
-        snapshot("06-sweep")
         rule.onNodeWithText("Off").performScrollTo().performClick()
         rule.onNodeWithText("Headset check").assertIsDisplayed()
         snapshot("12-headset-check")
@@ -207,7 +217,7 @@ class StimulateFlowTest {
         rule.runOnIdle { assertTrue(state.wasHeadsetCheckedToday()) }
         rule.onNodeWithText("On").performScrollTo().performClick()
         rule.onNodeWithText("Sweep", useUnmergedTree = true).performScrollTo()
-        rule.onNodeWithText("Fixed", useUnmergedTree = true).performClick()
+        rule.onNodeWithText("Fixed", useUnmergedTree = true).performScrollTo().performClick()
         rule.runOnIdle { state.quickMinutes = 1 }
         rule.onNodeWithText("Start  10 Hz · 1 min").performClick()
         rule.onNodeWithText("Pause").assertIsDisplayed().performClick()
@@ -239,13 +249,19 @@ class StimulateFlowTest {
         }
         snapshot("16-builder-new")
         rule.onNodeWithText("โปรแกรมใหม่").performTextReplacement("Native test program")
-        rule.onNodeWithText("Sweep", useUnmergedTree = true).performScrollTo().performClick()
+        rule.onNodeWithText("Sweep").performScrollTo().performSemanticsAction(
+            SemanticsActions.OnClick
+        ) {
+            it()
+        }
+        // Scroll the presets below the steppers into view, away from the viewport edge.
+        rule.onNodeWithText("Broad").performScrollTo()
         repeat(5) {
-            rule
-                .onAllNodesWithContentDescription("เพิ่ม Hz")
-                .onFirst()
-                .performScrollTo()
-                .performClick()
+            rule.onAllNodesWithContentDescription("เพิ่ม Hz").onFirst().performSemanticsAction(
+                SemanticsActions.OnClick
+            ) {
+                it()
+            }
         }
         rule.runOnIdle {
             assertEquals(13.0, state.draft!!.steps.first().f1, 0.0)
@@ -285,6 +301,7 @@ class StimulateFlowTest {
             assertEquals("Native test program", state.customs.single().name)
         }
         snapshot("10-custom-program")
+        rule.waitUntil(6000) { state.notice.isEmpty() }
         rule.onNodeWithText("Duplicate").performScrollTo()
         rule.onNodeWithText("Edit", useUnmergedTree = true).assertExists()
         rule.onNodeWithText("Delete", useUnmergedTree = true).assertExists()
@@ -297,12 +314,14 @@ class StimulateFlowTest {
             assertEquals(1, state.customs.size)
         }
         rule.onNodeWithText("Cancel").performScrollTo().performClick()
+        discardIfAsked()
         rule.onNodeWithText("Edit", useUnmergedTree = true).performScrollTo().performClick()
         rule.runOnIdle {
             assertEquals(state.selected!!.id, state.draft!!.id)
             assertEquals("Native test program", state.draft!!.name)
         }
         rule.onNodeWithText("Cancel").performScrollTo().performClick()
+        discardIfAsked()
         rule.runOnIdle { state.navigate(Screen.SETTINGS) }
         snapshot("18-settings-pro")
         rule.runOnIdle { state.pro = false }

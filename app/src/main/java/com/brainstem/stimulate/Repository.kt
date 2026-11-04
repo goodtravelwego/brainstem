@@ -107,6 +107,9 @@ fun SessionRecord.json() =
         .put("iapf", iapf)
         .put("initialLevel", initialLevel)
         .put("events", JSONArray(events))
+        .put("plannedSec", plannedSeconds)
+        .put("profileName", profileName)
+        .put("simulationSpeed", simulationSpeed)
         .put(
             "items",
             JSONArray(
@@ -129,6 +132,9 @@ fun recordFrom(j: JSONObject) =
         iapf = j.optDouble("iapf", 0.0),
         initialLevel = j.optInt("initialLevel", j.optInt("lvl", 1)),
         events = j.optJSONArray("events")?.strings() ?: emptyList(),
+        plannedSeconds = j.optInt("plannedSec"),
+        profileName = j.optString("profileName"),
+        simulationSpeed = j.optInt("simulationSpeed"),
         dose =
             j.getJSONObject("dose").let { d ->
                 d.keys().asSequence().associateWith { d.getDouble(it) }
